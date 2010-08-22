@@ -10,6 +10,7 @@ Usage:
   list
   reset
   delete n
+  help (or --help, -h) (see this)
 """
 __version__ = "2.66"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
