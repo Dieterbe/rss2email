@@ -336,9 +336,9 @@ def getContent(entry, HTMLOK=0):
 	
 	# How this works:
 	#  * We have a bunch of potential contents. 
-	#  * We go thru looking for our first choice. 
+	#  * We continue looking for our first choice. 
 	#    (HTML or text, depending on HTMLOK)
-	#  * If that doesn't work, we go thru looking for our second choice.
+	#  * If that doesn't work, we continue looking for our second choice.
 	#  * If that still doesn't work, we just take the first one.
 	#
 	# Possible future improvement:
