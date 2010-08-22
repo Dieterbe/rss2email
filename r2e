@@ -1,2 +1,8 @@
 #!/bin/sh
-python rss2email.py feeds.dat $*
+if pgrep -f 'python.*rss2email.py' >/dev/null
+then
+	echo "rss2email already running. aborting" >&2
+	exit 1
+else
+	exec rss2email.py $*
+fi
