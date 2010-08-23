@@ -1,0 +1,19 @@
+== Goals ==
+
+Respect for your $HOME, keeping it clean.
+Good for your sanity, especially if you keep your $HOME
+under version control
+
+* adherence to XDG basedir spec
+* plaintext files, config and state being in separate files
+
+Added bonus:
+things get simpler, you don't need r2e actions like
+list/delete/add/reset: since everything is in regular files,
+you can use your normal text editing tools
+
+This applies to *nix users.  I guess these principles can be ported
+to work on Windows as well, but I leave that to someone else
+
+And finally: avoid dangling locks.  Or locks alltogether.
+Using the wrapper script, you avoid running the process twice.
