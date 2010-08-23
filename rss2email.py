@@ -161,6 +161,9 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 #DEPRECATED 		mimify.mimify(ins, outs)
 #DEPRECATED 		msg_as_string = outs.getvalue()
     		
+
+	if VERBOSE: print 'Sending:', unu(subject)
+
 	if SMTP_SEND:
 		if not smtpserver: 
 			import smtplib
