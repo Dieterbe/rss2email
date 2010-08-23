@@ -3,6 +3,9 @@
 # The email address messages are from by default:
 DEFAULT_FROM = "bozo@dev.null.invalid"
 
+# The email address messages are sent to by default:
+DEFAULT_TO = "bozo@dev.null.invalid"
+
 # 1: Send text/html messages when possible.
 # 0: Convert HTML to plain text.
 HTML_MAIL = 1
