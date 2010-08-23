@@ -3,13 +3,7 @@
 http://rss2email.infogami.com
 
 Usage:
-  new [emailaddress] (create new feedfile)
-  email newemailaddress (update default email)
-  run [--no-send] [num]
-  add feedurl [emailaddress]
-  list
-  reset
-  delete n
+  run [--no-send]
   help (or --help, -h) (see this)
 """
 __version__ = "2.66"
@@ -18,15 +12,21 @@ __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
 ___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess", 
                      "Matej Cepl", "Martin 'Joey' Schulze", 
                      "Marcel Ackermann (http://www.DreamFlasher.de)", 
-                     "Lindsey Smith", "Aaron Swartz (original author)" ]
+                     "Lindsey Smith", "Aaron Swartz (original author)",
+		     "Dieter Plaetinck" ]
 
 import urllib2
+from os.path import join
+
 urllib2.install_opener(urllib2.build_opener())
 
 ### Vaguely Customizable Options ###
 
 # The email address messages are from by default:
 DEFAULT_FROM = "bozo@dev.null.invalid"
+
+# The default address to send messages to:
+DEFAULT_TO = "bozo@dev.null.invalid"
 
 # 1: Send text/html messages when possible.
 # 0: Convert HTML to plain text.
@@ -231,11 +231,44 @@ LINKS_EACH_PARAGRAPH = 0
 # Wrap long lines at position. 0 for no wrapping. (Requires Python 2.3.)
 BODY_WIDTH = 0
 
+
+### Set up locations
+import os
+def xdghome(key, default):
+	'''Attempts to use the environ XDG_*_HOME paths if they exist otherwise
+	   use $HOME and the default path.'''
+
+	xdgkey = "XDG_%s_HOME" % key
+	if xdgkey in os.environ.keys() and os.environ[xdgkey]:
+		return os.environ[xdgkey]
+
+	return join(os.environ['HOME'], default)
+
+# Setup xdg paths.
+CACHE_DIR = join(xdghome('CACHE', '.cache/'), 'r2e/')
+DATA_DIR = join(xdghome('DATA', '.local/share/'), 'r2e/')
+CONFIG_DIR = join(xdghome('CONFIG', '.config/'), 'r2e/')
+FEEDS_CONFIG = join (CONFIG_DIR, 'feeds')
+FEEDS_STATE = join (DATA_DIR, 'feeds_state')
+
+# Ensure data paths exist.
+for path in [CACHE_DIR, DATA_DIR, CONFIG_DIR]:
+	try:
+		if not os.path.exists(path):
+			os.makedirs(path)
+	except Exception, e:
+		print >>warn, ""
+		print >>warn, ('Fatal error: could not check/create directory "%s"' % (path))
+		if hasattr(e, 'reason'):
+			print >>warn, "Reason:", e.reason
+			sys.exit(1)
+
+
 ### Load the Options ###
 
 # Read options from config file if present.
 import sys
-sys.path.insert(0,".")
+sys.path.insert(0,CONFIG_DIR) 
 try:
 	from config import *
 except:
@@ -248,7 +281,7 @@ if QP_REQUIRED:
 
 ### Import Modules ###
 
-import cPickle as pickle, time, os, traceback, sys, types, subprocess
+import cPickle as pickle, time, traceback, sys, types, subprocess
 hash = ()
 try:
 	import hashlib
@@ -431,40 +464,57 @@ def getEmail(feed, entry):
 class Feed:
 	def __init__(self, url, to):
 		self.url, self.etag, self.modified, self.seen = url, None, None, {}
-		self.to = to		
+		self.to = to
 
-def load(lock=1):
-	if not os.path.exists(feedfile):
-		print 'Feedfile "%s" does not exist.  If you\'re using r2e for the first time, you' % feedfile
-		print "have to run 'r2e new' first."
-		sys.exit(1)
+def load():
+	# First load all the urls as configured by user
+	if not os.path.exists(FEEDS_CONFIG):
+		print 'Feedfile "%s" does not exist.  Nothing to do' % FEEDS_CONFIG
+		sys.exit(0)
 	try:
-		feedfileObject = open(feedfile, 'r')
+		feeds = {}
+		with open(FEEDS_CONFIG) as file:
+			for line in file:
+				fields = line.strip().split()
+				url = fields[0]
+				settings = None
+				to = None
+				if (len(fields) > 1):
+					to = fields[1]
+				# yes, we store the url twice.  not the most efficient, but like this
+				# you can do fast lookups and have a normal Feed object	
+				feeds[url] = Feed(url, to)
 	except IOError, e:
 		print "Feedfile could not be opened: %s" % e
 		sys.exit(1)
-	feeds = pickle.load(feedfileObject)
-	
-	if lock:
-		locktype = 0
-		if unix:
-			locktype = fcntl.LOCK_EX
-			fcntl.flock(feedfileObject.fileno(), locktype)
-		#HACK: to deal with lock caching
-		feedfileObject = open(feedfile, 'r')
-		feeds = pickle.load(feedfileObject)
-		if unix: 
-			fcntl.flock(feedfileObject.fileno(), locktype)
 
-	return feeds, feedfileObject
+	# Then, add info about where we left off (seen entries), if available	
+	if os.path.exists(FEEDS_STATE):
+		try:
+			statefile = open(FEEDS_STATE, 'r')
+		except IOError, e:
+			print "Feed state file %s could not be opened: %s" % (FEEDS_STATE, e)
+			sys.exit(1)
 
-def unlock(feeds, feedfileObject):
-	if not unix: 
-		pickle.dump(feeds, open(feedfile, 'w'))
-	else:	
-		pickle.dump(feeds, open(feedfile+'.tmp', 'w'))
-		os.rename(feedfile+'.tmp', feedfile)
-		fcntl.flock(feedfileObject.fileno(), fcntl.LOCK_UN)
+		# a dictionary with key url, value: a dict
+		feeds_state = pickle.load(statefile)
+		for url, seen in feeds_state.items():
+			if url in feeds:
+				feeds[url].seen = seen
+	return feeds
+
+def save(feeds):
+	'''Overwrite the state of all feeds'''
+	# TODO: for feeds that are temporarily disabled, we will erase the state.  We should nicely update
+	# the entries for the specific feeds instead
+	try:
+		feeds_state = {}
+		for url, feed in feeds.items():
+			feeds_state[url] = feed.seen
+		pickle.dump(feeds_state, open(FEEDS_STATE, 'w'))
+
+	except IOError, e:
+		print "Could not write to state file %s: %s" % (FEEDS_STATE, e)
 
 #@timelimit(FEED_TIMEOUT)		
 def parse(url, etag, modified):
@@ -477,50 +527,27 @@ def parse(url, etag, modified):
 		
 ### Program Functions ###
 
-def add(*args):
-	if len(args) == 2 and contains(args[1], '@') and not contains(args[1], '://'):
-		urls, to = [args[0]], args[1]
-	else:
-		urls, to = args, None
-	
-	feeds, feedfileObject = load()
-	if (feeds and not isstr(feeds[0]) and to is None) or (not len(feeds) and to is None):
-		print "No email address has been defined. Please run 'r2e email emailaddress' or"
-		print "'r2e add url emailaddress'."
-		sys.exit(1)
-	for url in urls: feeds.append(Feed(url, to))
-	unlock(feeds, feedfileObject)
-
-def run(num=None):
-	feeds, feedfileObject = load()
+def run():
+	feeds = load()
 	smtpserver = None
 	try:
-		# We store the default to address as the first item in the feeds list.
-		# Here we take it out and save it for later.
-		default_to = ""
-		if feeds and isstr(feeds[0]): default_to = feeds[0]; ifeeds = feeds[1:] 
-		else: ifeeds = feeds
+		default_to = DEFAULT_TO
 		
-		if num: ifeeds = [feeds[num]]
-		feednum = 0
-		
-		for f in ifeeds:
+		for url, f in feeds.items():
 			try: 
-				feednum += 1
-				if VERBOSE: print >>warn, 'I: Processing [%d] "%s"' % (feednum, f.url)
+				if VERBOSE: print >>warn, 'I: Processing "%s"' % (f.url)
 				r = {}
 				try:
 					r = timelimit(FEED_TIMEOUT, parse)(f.url, f.etag, f.modified)
 				except TimeoutError:
-					print >>warn, 'W: feed [%d] "%s" timed out' % (feednum, f.url)
+					print >>warn, 'W: feed "%s" timed out' % (f.url)
 					continue
 				
 				# Handle various status conditions, as required
 				if 'status' in r:
 					if r.status == 301: f.url = r['url']
 					elif r.status == 410:
-						print >>warn, "W: feed gone; deleting", f.url
-						feeds.remove(f)
+						print >>warn, "W: feed gone", f.url
 						continue
 				
 				http_status = r.get('status', 200)
@@ -531,42 +558,42 @@ def run(num=None):
 				exc_type = r.get("bozo_exception", Exception()).__class__
 				if http_status != 304 and not r.entries and not r.get('version', ''):
 					if http_status not in [200, 302]: 
-						print >>warn, "W: error %d [%d] %s" % (http_status, feednum, f.url)
+						print >>warn, "W: error %d %s" % (http_status, f.url)
 
 					elif contains(http_headers.get('content-type', 'rss'), 'html'):
-						print >>warn, "W: looks like HTML [%d] %s"  % (feednum, f.url)
+						print >>warn, "W: looks like HTML %s"  % (f.url)
 
 					elif http_headers.get('content-length', '1') == '0':
-						print >>warn, "W: empty page [%d] %s" % (feednum, f.url)
+						print >>warn, "W: empty page %s" % (f.url)
 
 					elif hasattr(socket, 'timeout') and exc_type == socket.timeout:
-						print >>warn, "W: timed out on [%d] %s" % (feednum, f.url)
+						print >>warn, "W: timed out on %s" % (f.url)
 					
 					elif exc_type == IOError:
-						print >>warn, 'W: "%s" [%d] %s' % (r.bozo_exception, feednum, f.url)
+						print >>warn, 'W: "%s" %s' % (r.bozo_exception, f.url)
 					
 					elif hasattr(feedparser, 'zlib') and exc_type == feedparser.zlib.error:
-						print >>warn, "W: broken compression [%d] %s" % (feednum, f.url)
+						print >>warn, "W: broken compression %s" % (f.url)
 					
 					elif exc_type in socket_errors:
 						exc_reason = r.bozo_exception.args[1]
-						print >>warn, "W: %s [%d] %s" % (exc_reason, feednum, f.url)
+						print >>warn, "W: %s %s" % (exc_reason, f.url)
 
 					elif exc_type == urllib2.URLError:
 						if r.bozo_exception.reason.__class__ in socket_errors:
 							exc_reason = r.bozo_exception.reason.args[1]
 						else:
 							exc_reason = r.bozo_exception.reason
-						print >>warn, "W: %s [%d] %s" % (exc_reason, feednum, f.url)
+						print >>warn, "W: %s %s" % (exc_reason, f.url)
 					
 					elif exc_type == AttributeError:
-						print >>warn, "W: %s [%d] %s" % (r.bozo_exception, feednum, f.url)
+						print >>warn, "W: %s %s" % (r.bozo_exception, f.url)
 					
 					elif exc_type == KeyboardInterrupt:
 						raise r.bozo_exception
 						
 					elif r.bozo:
-						print >>warn, 'E: error in [%d] "%s" feed (%s)' % (feednum, f.url, r.get("bozo_exception", "can't process"))
+						print >>warn, 'E: error in "%s" feed (%s)' % (f.url, r.get("bozo_exception", "can't process"))
 
 					else:
 						print >>warn, "=== rss2email encountered a problem with this feed ==="
@@ -708,96 +735,24 @@ def run(num=None):
 				continue
 
 	finally:		
-		unlock(feeds, feedfileObject)
+		save(feeds)
 		if smtpserver:
 			smtpserver.quit()
-
-def list():
-	feeds, feedfileObject = load(lock=0)
-	default_to = ""
-	
-	if feeds and isstr(feeds[0]):
-		default_to = feeds[0]; ifeeds = feeds[1:]; i=1
-		print "default email:", default_to
-	else: ifeeds = feeds; i = 0
-	for f in ifeeds:
-		print `i`+':', f.url, '('+(f.to or ('default: '+default_to))+')'
-		if not (f.to or default_to):
-			print "   W: Please define a default address with 'r2e email emailaddress'"
-		i+= 1
-
-def delete(n):
-	feeds, feedfileObject = load()
-	if (n == 0) and (feeds and isstr(feeds[0])):
-		print >>warn, "W: ID has to be equal to or higher than 1"
-	elif n >= len(feeds):
-		print >>warn, "W: no such feed"
-	else:
-		print >>warn, "W: deleting feed %s" % feeds[n].url
-		feeds = feeds[:n] + feeds[n+1:]
-		if n != len(feeds):
-			print >>warn, "W: feed IDs have changed, list before deleting again"
-	unlock(feeds, feedfileObject)
-	
-def reset():
-	feeds, feedfileObject = load()
-	if feeds and isstr(feeds[0]):
-		ifeeds = feeds[1:]
-	else: ifeeds = feeds
-	for f in ifeeds:
-		if VERBOSE: print "Resetting %d already seen items" % len(f.seen)
-		f.seen = {}
-		f.etag = None
-		f.modified = None
-	
-	unlock(feeds, feedfileObject)
-	
-def email(addr):
-	feeds, feedfileObject = load()
-	if feeds and isstr(feeds[0]): feeds[0] = addr
-	else: feeds = [addr] + feeds
-	unlock(feeds, feedfileObject)
 
 if __name__ == '__main__':
 	args = sys.argv
 	try:
-		if len(args) < 3: raise InputError, "insufficient args"
-		feedfile, action, args = args[1], args[2], args[3:]
+		if len(args) < 2: raise InputError, "insufficient args"
+		action, args = args[1], args[2:]
 		
 		if action == "run": 
 			if args and args[0] == "--no-send":
 				def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtpserver=None):
 					if VERBOSE: print 'Not sending:', unu(subject)
 
-			if args and args[-1].isdigit(): run(int(args[-1]))
-			else: run()
-
-		elif action == "email":
-			if not args:
-				raise InputError, "Action '%s' requires an argument" % action
-			else:
-				email(args[0])
-
-		elif action == "add": add(*args)
-
-		elif action == "new": 
-			if len(args) == 1: d = [args[0]]
-			else: d = []
-			pickle.dump(d, open(feedfile, 'w'))
-
-		elif action == "list": list()
+			run()
 
 		elif action in ("help", "--help", "-h"): print __doc__
-
-		elif action == "delete":
-			if not args:
-				raise InputError, "Action '%s' requires an argument" % action
-			elif args[0].isdigit():
-				delete(int(args[0]))
-			else:
-				raise InputError, "Action '%s' requires a number as its argument" % action
-
-		elif action == "reset": reset()
 
 		else:
 			raise InputError, "Invalid action"
