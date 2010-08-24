@@ -6,7 +6,7 @@ Usage:
   run [--no-send]
   help (or --help, -h) (see this)
 """
-__version__ = "2.66"
+__version__ = "2.66-xdg"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
 ___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess", 
