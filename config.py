@@ -35,9 +35,13 @@ DATE_HEADER_ORDER = ('modified', 'issued', 'created')
 QP_REQUIRED = 0
 #DEPRECATED 
 	
-# 1: Name feeds as they're being processed.
-# 0: Keep quiet.
-VERBOSE = 0
+# 1: Show debug messages on CLI and logfile (when enabled).
+# 0: Only show messages level info and higher.
+DEBUG = 0
+
+# 1: Log to $XDG_DATA_HOME/r2e/log.
+# 0: Don't log
+LOG = 0
 
 # 1: Use the publisher's email if you can't find the author's.
 # 0: Just use the DEFAULT_FROM email instead.

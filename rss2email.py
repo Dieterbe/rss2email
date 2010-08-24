@@ -57,9 +57,13 @@ DATE_HEADER_ORDER = ('modified', 'issued', 'created')
 QP_REQUIRED = 0
 #DEPRECATED 
 	
-# 1: Name feeds as they're being processed.
-# 0: Keep quiet.
-VERBOSE = 0
+# 1: Show debug messages on CLI and logfile (when enabled).
+# 0: Only show messages level info and higher.
+DEBUG = 0
+
+# 1: Log to $XDG_DATA_HOME/r2e/log
+# 0: Don't log
+LOG = 0
 
 # 1: Use the publisher's email if you can't find the author's.
 # 0: Just use the DEFAULT_FROM email instead.
@@ -162,7 +166,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 #DEPRECATED 		msg_as_string = outs.getvalue()
     		
 
-	if VERBOSE: print 'Sending:', unu(subject)
+	logging.info ('Sending: %s', unu(subject))
 
 	if SMTP_SEND:
 		if not smtpserver: 
@@ -173,11 +177,10 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 			except KeyboardInterrupt:
 				raise
 			except Exception, e:
-				print >>warn, ""
-				print >>warn, ('Fatal error: could not connect to mail server "%s"' % SMTP_SERVER)
-				print >>warn, ('Check your config.py file to confirm that SMTP_SERVER and other mail server settings are configured properly')
+				logging.critical ('Could not connect to mail server "%s"', SMTP_SERVER)
+				logging.critical ('Check your config.py file to confirm that SMTP_SERVER and other mail server settings are configured properly')
 				if hasattr(e, 'reason'):
-					print >>warn, "Reason:", e.reason
+					logging.critical ("Reason: %s", e.reason)
 				sys.exit(1)
 					
 			if AUTHREQUIRED:
@@ -189,11 +192,10 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 				except KeyboardInterrupt:
 					raise
 				except Exception, e:
-					print >>warn, ""
-					print >>warn, ('Fatal error: could not authenticate with mail server "%s" as user "%s"' % (SMTP_SERVER, SMTP_USER))
-					print >>warn, ('Check your config.py file to confirm that SMTP_SERVER and other mail server settings are configured properly')
+					logging.critical ('Could not authenticate with mail server "%s" as user "%s"', SMTP_SERVER, SMTP_USER)
+					logging.critical ('Check your config.py file to confirm that SMTP_SERVER and other mail server settings are configured properly')
 					if hasattr(e, 'reason'):
-						print >>warn, "Reason:", e.reason
+						logging.critical ("Reason: %s", e.reason)
 					sys.exit(1)
 					
 		smtpserver.sendmail(sender, recipient, msg_as_string)
@@ -206,11 +208,10 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 			status = p.returncode
 			assert status != None, "just a sanity check"
 			if status != 0:
-				print >>warn, ""
-				print >>warn, ('Fatal error: sendmail exited with code %s' % status)
+				logging.critical ('Sendmail exited with code %s', status)
 				sys.exit(1)
 		except:
-			print '''Error attempting to send email via sendmail. Possibly you need to configure your config.py to use a SMTP server? Please refer to the rss2email documentation or website (http://rss2email.infogami.com) for complete documentation of config.py. The options below may suffice for configuring email:
+			logging.critical( '''Error attempting to send email via sendmail. Possibly you need to configure your config.py to use a SMTP server? Please refer to the rss2email documentation or website (http://rss2email.infogami.com) for complete documentation of config.py. The options below may suffice for configuring email:
 # 1: Use SMTP_SERVER to send mail.
 # 0: Call /usr/sbin/sendmail to send mail.
 SMTP_SEND = 0
@@ -219,7 +220,7 @@ SMTP_SERVER = "smtp.yourisp.net:25"
 AUTHREQUIRED = 0 # if you need to use SMTP AUTH set to 1
 SMTP_USER = 'username'  # for SMTP AUTH, set SMTP username here
 SMTP_PASS = 'password'  # for SMTP AUTH, set SMTP password here
-'''
+''')
 			sys.exit(1)
 		return None
 
@@ -260,10 +261,9 @@ for path in [CACHE_DIR, DATA_DIR, CONFIG_DIR]:
 		if not os.path.exists(path):
 			os.makedirs(path)
 	except Exception, e:
-		print >>warn, ""
-		print >>warn, ('Fatal error: could not check/create directory "%s"' % (path))
+		logging.critical ('Could not check/create directory "%s"', path)
 		if hasattr(e, 'reason'):
-			print >>warn, "Reason:", e.reason
+			logging.critical ("Reason: %s", e.reason)
 			sys.exit(1)
 
 
@@ -277,10 +277,30 @@ try:
 except:
 	pass
 
-warn = sys.stderr
-	
 if QP_REQUIRED:
-	print >>warn, "QP_REQUIRED has been deprecated in rss2email."
+	logging.warning ("QP_REQUIRED has been deprecated in rss2email.")
+
+### Set up logging ###
+# http://docs.python.org/library/logging.html#logging-to-multiple-destinations
+import logging
+LOG_FILENAME = DATA_DIR + 'log'
+
+levels = [ logging.INFO, logging.DEBUG ]
+# Couldn't find a proper way to disable logging to file but not to console, so .. :
+filenames = [ '/dev/null', LOG_FILENAME ]
+logging.basicConfig(level=levels[DEBUG],
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M',
+                    filename=filenames[LOG]
+                    )
+console = logging.StreamHandler()
+console.setLevel(levels[DEBUG])
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
+
+logging.info ('Rss2email started')
+
 
 ### Import Modules ###
 
@@ -472,7 +492,7 @@ class Feed:
 def load():
 	# First load all the urls as configured by user
 	if not os.path.exists(FEEDS_CONFIG):
-		print 'Feedfile "%s" does not exist.  Nothing to do' % FEEDS_CONFIG
+		logging.info ('Feedfile "%s" does not exist.  Nothing to do', FEEDS_CONFIG)
 		sys.exit(0)
 	try:
 		feeds = {}
@@ -488,7 +508,7 @@ def load():
 				# you can do fast lookups and have a normal Feed object	
 				feeds[url] = Feed(url, to)
 	except IOError, e:
-		print "Feedfile could not be opened: %s" % e
+		logging.critical ("Feedfile could not be opened: %s", e)
 		sys.exit(1)
 
 	# Then, add info about where we left off (seen entries), if available	
@@ -496,7 +516,7 @@ def load():
 		try:
 			statefile = open(FEEDS_STATE, 'r')
 		except IOError, e:
-			print "Feed state file %s could not be opened: %s" % (FEEDS_STATE, e)
+			logging.critical ( "Feed state file %s could not be opened: %s", FEEDS_STATE, e)
 			sys.exit(1)
 
 		# a dictionary with key url, value: a dict
@@ -504,6 +524,8 @@ def load():
 		for url, seen in feeds_state.items():
 			if url in feeds:
 				feeds[url].seen = seen
+	logging.debug ("Feeds:")
+	logging.debug (feeds)
 	return feeds
 
 def save(feeds):
@@ -517,7 +539,7 @@ def save(feeds):
 		pickle.dump(feeds_state, open(FEEDS_STATE, 'w'))
 
 	except IOError, e:
-		print "Could not write to state file %s: %s" % (FEEDS_STATE, e)
+		logging.error ( "Could not write to state file %s: %s", FEEDS_STATE, e)
 
 #@timelimit(FEED_TIMEOUT)		
 def parse(url, etag, modified):
@@ -538,77 +560,76 @@ def run():
 		
 		for url, f in feeds.items():
 			try: 
-				if VERBOSE: print >>warn, 'I: Processing "%s"' % (f.url)
+				logging.info ('Processing "%s"', f.url)
 				r = {}
 				try:
 					r = timelimit(FEED_TIMEOUT, parse)(f.url, f.etag, f.modified)
 				except TimeoutError:
-					print >>warn, 'W: feed "%s" timed out' % (f.url)
+					logging.warning ('Feed "%s" timed out', f.url)
 					continue
 				
 				# Handle various status conditions, as required
 				if 'status' in r:
 					if r.status == 301: f.url = r['url']
 					elif r.status == 410:
-						print >>warn, "W: feed gone", f.url
+						logging.warning ("Feed %s gone", f.url)
 						continue
 				
 				http_status = r.get('status', 200)
-				if VERBOSE > 1: print >>warn, "I: http status", http_status
+				logging.info ("Http status %s", http_status)
 				http_headers = r.get('headers', {
 				  'content-type': 'application/rss+xml', 
 				  'content-length':'1'})
 				exc_type = r.get("bozo_exception", Exception()).__class__
 				if http_status != 304 and not r.entries and not r.get('version', ''):
 					if http_status not in [200, 302]: 
-						print >>warn, "W: error %d %s" % (http_status, f.url)
+						logging.warning ("Error %d %s", http_status, f.url)
 
 					elif contains(http_headers.get('content-type', 'rss'), 'html'):
-						print >>warn, "W: looks like HTML %s"  % (f.url)
+						logging.warning ("Looks like HTML %s", f.url)
 
 					elif http_headers.get('content-length', '1') == '0':
-						print >>warn, "W: empty page %s" % (f.url)
+						logging.warning ("Empty page %s", f.url)
 
 					elif hasattr(socket, 'timeout') and exc_type == socket.timeout:
-						print >>warn, "W: timed out on %s" % (f.url)
+						logging.warning ("Timed out on %s", f.url)
 					
 					elif exc_type == IOError:
-						print >>warn, 'W: "%s" %s' % (r.bozo_exception, f.url)
+						logging.warning ('"%s" %s', r.bozo_exception, f.url)
 					
 					elif hasattr(feedparser, 'zlib') and exc_type == feedparser.zlib.error:
-						print >>warn, "W: broken compression %s" % (f.url)
+						logging.warning ("Broken compression %s", f.url)
 					
 					elif exc_type in socket_errors:
 						exc_reason = r.bozo_exception.args[1]
-						print >>warn, "W: %s %s" % (exc_reason, f.url)
+						logging.warning ("%s %s", exc_reason, f.url)
 
 					elif exc_type == urllib2.URLError:
 						if r.bozo_exception.reason.__class__ in socket_errors:
 							exc_reason = r.bozo_exception.reason.args[1]
 						else:
 							exc_reason = r.bozo_exception.reason
-						print >>warn, "W: %s %s" % (exc_reason, f.url)
+						logging.warning ("%s %s", exc_reason, f.url)
 					
 					elif exc_type == AttributeError:
-						print >>warn, "W: %s %s" % (r.bozo_exception, f.url)
+						logging.warning ("%s %s", r.bozo_exception, f.url)
 					
 					elif exc_type == KeyboardInterrupt:
 						raise r.bozo_exception
 						
 					elif r.bozo:
-						print >>warn, 'E: error in "%s" feed (%s)' % (f.url, r.get("bozo_exception", "can't process"))
+						logging.warning ('Error in "%s" feed (%s)', f.url, r.get("bozo_exception", "can't process"))
 
 					else:
-						print >>warn, "=== rss2email encountered a problem with this feed ==="
-						print >>warn, "=== See the rss2email FAQ at http://www.allthingsrss.com/rss2email/ for assistance ==="
-						print >>warn, "=== If this occurs repeatedly, send this to lindsey@allthingsrss.com ==="
-						print >>warn, "E:", r.get("bozo_exception", "can't process"), f.url
-						print >>warn, r
-						print >>warn, "rss2email", __version__
-						print >>warn, "feedparser", feedparser.__version__
-						print >>warn, "html2text", h2t.__version__
-						print >>warn, "Python", sys.version
-						print >>warn, "=== END HERE ==="
+						logging.warning ("=== rss2email encountered a problem with this feed ===")
+						logging.warning ("=== See the rss2email FAQ at http://www.allthingsrss.com/rss2email/ for assistance ===")
+						logging.warning ("=== If this occurs repeatedly, send this to lindsey@allthingsrss.com ===")
+						logging.warning (r.get("bozo_exception", "can't process") + ' "%s"', f.url)
+						logging.warning ("rss2email %s", __version__)
+						logging.warning ("feedparser %s", feedparser.__version__)
+						logging.warning ("html2text %s", h2t.__version__)
+						logging.warning ("Python %s", sys.version)
+						logging.warning ("=== END HERE ===")
 					continue
 				
 				r.entries.reverse()
@@ -629,8 +650,8 @@ def run():
 					if f.seen.has_key(frameid) and f.seen[frameid] == id: continue
 
 					if not (f.to or default_to):
-						print "No default email address defined. Please run 'r2e email emailaddress'"
-						print "Ignoring feed %s" % f.url
+						logging.warning ("No default email address defined and none given for this feed." )
+						logging.warning ("Ignoring feed %s", f.url)
 						break
 					
 					if 'title_detail' in entry and entry.title_detail:
@@ -666,7 +687,7 @@ def run():
 							if pos > 0:
 								extraheaders[hdr[:pos]] = hdr[pos+1:].strip()
 							else:
-								print >>warn, "W: malformed BONUS HEADER", BONUS_HEADER	
+								logging.warning ("Malformed BONUS HEADER %s", BONUS_HEADER)
 					
 					entrycontent = getContent(entry, HTMLOK=HTML_MAIL)
 					contenttype = 'plain'
@@ -725,16 +746,16 @@ def run():
 			except (KeyboardInterrupt, SystemExit):
 				raise
 			except:
-				print >>warn, "=== rss2email encountered a problem with this feed ==="
-				print >>warn, "=== See the rss2email FAQ at http://www.allthingsrss.com/rss2email/ for assistance ==="
-				print >>warn, "=== If this occurs repeatedly, send this to lindsey@allthingsrss.com ==="
-				print >>warn, "E: could not parse", f.url
-				traceback.print_exc(file=warn)
-				print >>warn, "rss2email", __version__
-				print >>warn, "feedparser", feedparser.__version__
-				print >>warn, "html2text", h2t.__version__
-				print >>warn, "Python", sys.version
-				print >>warn, "=== END HERE ==="
+				logging.warning ("=== rss2email encountered a problem with this feed ===")
+				logging.warning ("=== See the rss2email FAQ at http://www.allthingsrss.com/rss2email/ for assistance ===")
+				logging.warning ("=== If this occurs repeatedly, send this to lindsey@allthingsrss.com ===")
+				logging.warning ("Could not parse %s", f.url)
+				logging.warning (traceback.extract_stack())
+				logging.warning ("rss2email %s", __version__)
+				logging.warning ("feedparser %s", feedparser.__version__)
+				logging.warning ("html2text %s", h2t.__version__)
+				logging.warning ("Python %s", sys.version)
+				logging.warning ("=== END HERE ===")
 				continue
 
 	finally:		
@@ -751,7 +772,7 @@ if __name__ == '__main__':
 		if action == "run": 
 			if args and args[0] == "--no-send":
 				def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtpserver=None):
-					if VERBOSE: print 'Not sending:', unu(subject)
+					logging.info ('Not sending: %s', unu(subject))
 
 			run()
 
@@ -761,7 +782,6 @@ if __name__ == '__main__':
 			raise InputError, "Invalid action"
 		
 	except InputError, e:
-		print "E:", e
-		print
-		print __doc__
+		logging.error (e)
+		logging.error (__doc__)
 
