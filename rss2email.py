@@ -500,12 +500,16 @@ def load():
 			for line in file:
 				fields = line.strip().split()
 				url = fields[0]
+				if url[0] == '#':
+					logging.debug ("Skipping commented out: %s" % url[1:])
+					continue
 				settings = None
 				to = None
 				if (len(fields) > 1):
 					to = fields[1]
 				# yes, we store the url twice.  not the most efficient, but like this
 				# you can do fast lookups and have a normal Feed object	
+				logging.debug ("loading: %s" % url)
 				feeds[url] = Feed(url, to)
 	except IOError, e:
 		logging.critical ("Feedfile could not be opened: %s", e)

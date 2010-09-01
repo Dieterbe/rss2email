@@ -21,3 +21,6 @@ Using the wrapper script, you avoid running the process twice.
 All this applies to *nix users.  I guess these principles can be ported
 to work on Windows as well, but I leave that to someone else.
 
+Other improvements:
+- better logging / debugging using python builtins over NIH cruft
+- support for temporary disabling feeds (by commenting them out)
