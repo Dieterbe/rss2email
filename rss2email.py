@@ -499,6 +499,8 @@ def load():
 		with open(FEEDS_CONFIG) as file:
 			for line in file:
 				fields = line.strip().split()
+				if not len(fields):
+					continue
 				url = fields[0]
 				if url[0] == '#':
 					logging.debug ("Skipping commented out: %s" % url[1:])
