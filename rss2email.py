@@ -12,13 +12,13 @@ Usage:
   delete n
   help (or --help, -h) (see this)
 """
-__version__ = "2.66"
+__version__ = "2.67"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
 ___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess", 
                      "Matej Cepl", "Martin 'Joey' Schulze", 
                      "Marcel Ackermann (http://www.DreamFlasher.de)", 
-                     "Lindsey Smith", "Aaron Swartz (original author)" ]
+                     "Lindsey Smith (maintainer)", "Erik Hetzner", "Aaron Swartz (original author)" ] 
 
 import urllib2
 urllib2.install_opener(urllib2.build_opener())
@@ -287,6 +287,8 @@ h2t.LINKS_EACH_PARAGRAPH = LINKS_EACH_PARAGRAPH
 h2t.BODY_WIDTH = BODY_WIDTH
 html2text = h2t.html2text
 
+from types import *
+
 ### Utility Functions ###
 
 import threading
@@ -375,7 +377,12 @@ def getContent(entry, HTMLOK=0):
 def getID(entry):
 	"""Get best ID from an entry."""
 	if TRUST_GUID:
-		if 'id' in entry and entry.id: return entry.id
+		if 'id' in entry and entry.id:
+			# Newer versions of feedparser could return a dictionary
+			if type(entry.id) is DictType:
+				return entry.id.values()[0]
+
+			return entry.id
 
 	content = getContent(entry)
 	if content and content != "\n": return hash(unu(content)).hexdigest()
@@ -593,13 +600,17 @@ def run(num=None):
 					# Instead of letting these run wild, we put them in context
 					# by associating them with the actual ID (if it exists).
 					
-					frameid = entry.get('id', id)
-					
+					frameid = entry.get('id')
+					if not(frameid): frameid = id
+					if type(frameid) is DictType:
+						frameid = frameid.values()[0]
+	
 					# If this item's ID is in our database
 					# then it's already been sent
 					# and we don't need to do anything more.
 					
-					if f.seen.has_key(frameid) and f.seen[frameid] == id: continue
+					if frameid in f.seen:
+						if f.seen[frameid] == id: continue
 
 					if not (f.to or default_to):
 						print "No default email address defined. Please run 'r2e email emailaddress'"
@@ -626,8 +637,8 @@ def run(num=None):
 					
 					from_addr = getEmail(r.feed, entry)
 					
-					name = getName(r, entry)
-					fromhdr = '"'+ name + '" <' + from_addr + ">"
+					name = h2t.unescape(getName(r, entry))
+					fromhdr = formataddr((name, from_addr,))
 					tohdr = (f.to or default_to)
 					subjecthdr = title
 					datehdr = time.strftime("%a, %d %b %Y %H:%M:%S -0000", datetime)
@@ -652,7 +663,7 @@ def run(num=None):
 						content += '<div id="entry">\n'
 						content += '<h1'
 						content += ' class="header"'
-						content += '><a href="'+link+'">'+subjecthdr+'</a></h1>\n\n'
+						content += '><a href="'+link+'">'+subjecthdr+'</a></h1>\n'	
 						if ishtml(entrycontent):
 							body = entrycontent[1].strip()
 						else:
@@ -666,6 +677,12 @@ def run(num=None):
 									content += ('<br/>Enclosure: <a href="'+enclosure.url+'">'+enclosure.url+"</a>\n")
 								if (hasattr(enclosure, 'src') and enclosure.src != ""):
 									content += ('<br/>Enclosure: <a href="'+enclosure.src+'">'+enclosure.src+'</a><br/><img src="'+enclosure.src+'"\n')
+						if 'links' in entry:
+							for extralink in entry.links:
+								if ('rel' in extralink) and extralink['rel'] == u'via':
+									extraurl = extralink['href']
+									extraurl = extraurl.replace('http://www.google.com/reader/public/atom/', 'http://www.google.com/reader/view/')
+									content += '<br/>Via: <a href="'+extraurl+'">'+extralink['title']+'</a>\n'
 						content += '</p></div>\n'
 						content += "\n\n</body></html>"
 					else:	
@@ -681,6 +698,10 @@ def run(num=None):
 								for enclosure in entry.enclosures:
 									if enclosure.url != "":
 										content += ('Enclosure: <a href="'+enclosure.url+'">'+enclosure.url+"</a><br/>\n")
+							if 'links' in entry:
+								for extralink in entry.links:
+									if ('rel' in extralink) and extralink['rel'] == u'via':
+										content += 'Via: <a href="'+extralink['href']+'">'+extralink['title']+'</a><br/>\n'
 							
 							content += ("\n</body></html>")
 						else:
@@ -689,6 +710,10 @@ def run(num=None):
 								for enclosure in entry.enclosures:
 									if enclosure.url != "":
 										content += ('\nEnclosure: ' + enclosure.url + "\n")
+							if 'links' in entry:
+								for extralink in entry.links:
+									if ('rel' in extralink) and extralink['rel'] == u'via':
+										content += '<a href="'+extralink['href']+'">Via: '+extralink['title']+'</a>\n'
 
 					smtpserver = send(fromhdr, tohdr, subjecthdr, content, contenttype, extraheaders, smtpserver)
 			
