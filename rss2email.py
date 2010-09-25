@@ -15,10 +15,10 @@ Usage:
 __version__ = "2.67"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
-___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess", 
-                     "Matej Cepl", "Martin 'Joey' Schulze", 
-                     "Marcel Ackermann (http://www.DreamFlasher.de)", 
-                     "Lindsey Smith (maintainer)", "Erik Hetzner", "Aaron Swartz (original author)" ] 
+___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess",
+                     "Matej Cepl", "Martin 'Joey' Schulze",
+                     "Marcel Ackermann (http://www.DreamFlasher.de)",
+                     "Lindsey Smith (maintainer)", "Erik Hetzner", "Aaron Swartz (original author)" ]
 
 import urllib2
 urllib2.install_opener(urllib2.build_opener())
@@ -46,17 +46,17 @@ DATE_HEADER = 0
 
 # A tuple consisting of some combination of
 # ('issued', 'created', 'modified', 'expired')
-# expressing ordered list of preference in dates 
+# expressing ordered list of preference in dates
 # to use for the Date header of the email.
 DATE_HEADER_ORDER = ('modified', 'issued', 'created')
 
 # 1: Apply Q-P conversion (required for some MUAs).
 # 0: Send message in 8-bits.
 # http://cr.yp.to/smtp/8bitmime.html
-#DEPRECATED 
+#DEPRECATED
 QP_REQUIRED = 0
-#DEPRECATED 
-	
+#DEPRECATED
+
 # 1: Name feeds as they're being processed.
 # 0: Keep quiet.
 VERBOSE = 0
@@ -98,20 +98,20 @@ CHARSET_LIST='US-ASCII', 'BIG5', 'ISO-2022-JP', 'ISO-8859-1', 'UTF-8'
 from email.MIMEText import MIMEText
 from email.Header import Header
 from email.Utils import parseaddr, formataddr
-			 
+
 # Note: You can also override the send function.
 
 def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtpserver=None):
 	"""Send an email.
-	
+
 	All arguments should be Unicode strings (plain ASCII works as well).
-	
+
 	Only the real name part of sender and recipient addresses may contain
 	non-ASCII characters.
-	
+
 	The email will be properly MIME encoded and delivered though SMTP to
 	localhost port 25.  This is easy to change if you want something different.
-	
+
 	The charset of the email will be the first one out of the list
 	that can represent all the characters occurring in the email.
 	"""
@@ -119,7 +119,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 	# Header class is smart enough to try US-ASCII, then the charset we
 	# provide, then fall back to UTF-8.
 	header_charset = 'ISO-8859-1'
-	
+
 	# We must choose the body charset manually
 	for body_charset in CHARSET_LIST:
 	    try:
@@ -132,16 +132,16 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 	# Split real name (which is optional) and email address parts
 	sender_name, sender_addr = parseaddr(sender)
 	recipient_name, recipient_addr = parseaddr(recipient)
-	
+
 	# We must always pass Unicode strings to Header, otherwise it will
 	# use RFC 2047 encoding even on plain ASCII strings.
 	sender_name = str(Header(unicode(sender_name), header_charset))
 	recipient_name = str(Header(unicode(recipient_name), header_charset))
-	
+
 	# Make sure email addresses do not contain non-ASCII characters
 	sender_addr = sender_addr.encode('ascii')
 	recipient_addr = recipient_addr.encode('ascii')
-	
+
 	# Create the message ('plain' stands for Content-Type: text/plain)
 	msg = MIMEText(body.encode(body_charset), contenttype, body_charset)
 	msg['To'] = formataddr((recipient_name, recipient_addr))
@@ -151,23 +151,23 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 			msg[hdr] = Header(unicode(extraheaders[hdr], header_charset))
 		except:
 			msg[hdr] = Header(extraheaders[hdr])
-		
+
 	fromhdr = formataddr((sender_name, sender_addr))
 	msg['From'] = fromhdr
-		
+
 	msg_as_string = msg.as_string()
 #DEPRECATED 	if QP_REQUIRED:
 #DEPRECATED 		ins, outs = SIO(msg_as_string), SIO()
 #DEPRECATED 		mimify.mimify(ins, outs)
 #DEPRECATED 		msg_as_string = outs.getvalue()
-    		
+
 
 	if VERBOSE: print 'Sending:', unu(subject)
 
 	if SMTP_SEND:
-		if not smtpserver: 
+		if not smtpserver:
 			import smtplib
-			
+
 			try:
 				smtpserver = smtplib.SMTP(SMTP_SERVER)
 			except KeyboardInterrupt:
@@ -179,7 +179,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 				if hasattr(e, 'reason'):
 					print >>warn, "Reason:", e.reason
 				sys.exit(1)
-					
+
 			if AUTHREQUIRED:
 				try:
 					smtpserver.ehlo()
@@ -195,7 +195,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 					if hasattr(e, 'reason'):
 						print >>warn, "Reason:", e.reason
 					sys.exit(1)
-					
+
 		smtpserver.sendmail(sender, recipient, msg_as_string)
 		return smtpserver
 
@@ -245,7 +245,7 @@ except:
 	pass
 
 warn = sys.stderr
-	
+
 if QP_REQUIRED:
 	print >>warn, "QP_REQUIRED has been deprecated in rss2email."
 
@@ -263,18 +263,18 @@ except ImportError:
 unix = 0
 try:
 	import fcntl
-# A pox on SunOS file locking methods	
-	if (sys.platform.find('sunos') == -1): 
+# A pox on SunOS file locking methods
+	if (sys.platform.find('sunos') == -1):
 		unix = 1
 except:
 	pass
-		
+
 import socket; socket_errors = []
 for e in ['error', 'gaierror']:
 	if hasattr(socket, e): socket_errors.append(getattr(socket, e))
 
-#DEPRECATED import mimify 
-#DEPRECATED from StringIO import StringIO as SIO 
+#DEPRECATED import mimify
+#DEPRECATED from StringIO import StringIO as SIO
 #DEPRECATED mimify.CHARSET = 'utf-8'
 
 import feedparser
@@ -307,13 +307,13 @@ def timelimit(timeout, function):
                     threading.Thread.__init__(self)
                     self.result = None
                     self.error = None
-                
+
                 def run(self):
                     try:
                         self.result = function(*args, **kw)
                     except:
                         self.error = sys.exc_info()
-            
+
             c = Calculator()
             c.setDaemon(True) # don't hold up exiting
             c.start()
@@ -325,7 +325,7 @@ def timelimit(timeout, function):
             return c.result
         return internal2
 #    return internal
-    
+
 
 def isstr(f): return isinstance(f, type('')) or isinstance(f, type(u''))
 def ishtml(t): return type(t) is type(())
@@ -339,10 +339,10 @@ def unu(s): # I / freakin' hate / that unicode
 def getContent(entry, HTMLOK=0):
 	"""Select the best content from an entry, deHTMLizing if necessary.
 	If raw HTML is best, an ('HTML', best) tuple is returned. """
-	
+
 	# How this works:
-	#  * We have a bunch of potential contents. 
-	#  * We continue looking for our first choice. 
+	#  * We have a bunch of potential contents.
+	#  * We continue looking for our first choice.
 	#    (HTML or text, depending on HTMLOK)
 	#  * If that doesn't work, we continue looking for our second choice.
 	#  * If that still doesn't work, we just take the first one.
@@ -351,27 +351,27 @@ def getContent(entry, HTMLOK=0):
 	#  * Instead of just taking the first one
 	#    pick the one in the "best" language.
 	#  * HACK: hardcoded HTMLOK, should take a tuple of media types
-	
+
 	conts = entry.get('content', [])
-	
+
 	if entry.get('summary_detail', {}):
 		conts += [entry.summary_detail]
-	
+
 	if conts:
 		if HTMLOK:
 			for c in conts:
 				if contains(c.type, 'html'): return ('HTML', c.value)
-	
+
 		if not HTMLOK: # Only need to convert to text if HTML isn't OK
 			for c in conts:
 				if contains(c.type, 'html'):
 					return html2text(c.value)
-		
+
 		for c in conts:
 			if c.type == 'text/plain': return c.value
-	
-		return conts[0].value	
-	
+
+		return conts[0].value
+
 	return ""
 
 def getID(entry):
@@ -395,7 +395,7 @@ def getName(r, entry):
 	feed = r.feed
 	if hasattr(r, "url") and r.url in OVERRIDE_FROM.keys():
 		return OVERRIDE_FROM[r.url]
-	
+
 	name = feed.get('title', '')
 
 	if 'name' in entry.get('author_detail', []): # normally {} but py2.1
@@ -411,29 +411,29 @@ def getName(r, entry):
 		if feed.author_detail.name:
 			if name: name += ", "
 			name += feed.author_detail.name
-	
+
 	return name
 
 def getEmail(feed, entry):
 	"""Get the best email_address."""
 
 	if FORCE_FROM: return DEFAULT_FROM
-	
+
 	if 'email' in entry.get('author_detail', []):
 		return entry.author_detail.email
-	
+
 	if 'email' in feed.get('author_detail', []):
 		return feed.author_detail.email
-		
+
 	#TODO: contributors
-	
+
 	if USE_PUBLISHER_EMAIL:
 		if 'email' in feed.get('publisher_detail', []):
 			return feed.publisher_detail.email
-		
+
 		if feed.get("errorreportsto", ''):
 			return feed.errorreportsto
-			
+
 	return DEFAULT_FROM
 
 ### Simple Database of Feeds ###
@@ -441,7 +441,7 @@ def getEmail(feed, entry):
 class Feed:
 	def __init__(self, url, to):
 		self.url, self.etag, self.modified, self.seen = url, None, None, {}
-		self.to = to		
+		self.to = to
 
 def load(lock=1):
 	if not os.path.exists(feedfile):
@@ -454,7 +454,7 @@ def load(lock=1):
 		print "Feedfile could not be opened: %s" % e
 		sys.exit(1)
 	feeds = pickle.load(feedfileObject)
-	
+
 	if lock:
 		locktype = 0
 		if unix:
@@ -463,28 +463,28 @@ def load(lock=1):
 		#HACK: to deal with lock caching
 		feedfileObject = open(feedfile, 'r')
 		feeds = pickle.load(feedfileObject)
-		if unix: 
+		if unix:
 			fcntl.flock(feedfileObject.fileno(), locktype)
 
 	return feeds, feedfileObject
 
 def unlock(feeds, feedfileObject):
-	if not unix: 
+	if not unix:
 		pickle.dump(feeds, open(feedfile, 'w'))
-	else:	
+	else:
 		pickle.dump(feeds, open(feedfile+'.tmp', 'w'))
 		os.rename(feedfile+'.tmp', feedfile)
 		fcntl.flock(feedfileObject.fileno(), fcntl.LOCK_UN)
 
-#@timelimit(FEED_TIMEOUT)		
+#@timelimit(FEED_TIMEOUT)
 def parse(url, etag, modified):
 	if PROXY == '':
 		return feedparser.parse(url, etag, modified)
 	else:
 		proxy = urllib2.ProxyHandler( {"http":PROXY} )
-		return feedparser.parse(url, etag, modified, handlers = [proxy])	
-	
-		
+		return feedparser.parse(url, etag, modified, handlers = [proxy])
+
+
 ### Program Functions ###
 
 def add(*args):
@@ -492,7 +492,7 @@ def add(*args):
 		urls, to = [args[0]], args[1]
 	else:
 		urls, to = args, None
-	
+
 	feeds, feedfileObject = load()
 	if (feeds and not isstr(feeds[0]) and to is None) or (not len(feeds) and to is None):
 		print "No email address has been defined. Please run 'r2e email emailaddress' or"
@@ -508,14 +508,14 @@ def run(num=None):
 		# We store the default to address as the first item in the feeds list.
 		# Here we take it out and save it for later.
 		default_to = ""
-		if feeds and isstr(feeds[0]): default_to = feeds[0]; ifeeds = feeds[1:] 
+		if feeds and isstr(feeds[0]): default_to = feeds[0]; ifeeds = feeds[1:]
 		else: ifeeds = feeds
-		
+
 		if num: ifeeds = [feeds[num]]
 		feednum = 0
-		
+
 		for f in ifeeds:
-			try: 
+			try:
 				feednum += 1
 				if VERBOSE: print >>warn, 'I: Processing [%d] "%s"' % (feednum, f.url)
 				r = {}
@@ -524,7 +524,7 @@ def run(num=None):
 				except TimeoutError:
 					print >>warn, 'W: feed [%d] "%s" timed out' % (feednum, f.url)
 					continue
-				
+
 				# Handle various status conditions, as required
 				if 'status' in r:
 					if r.status == 301: f.url = r['url']
@@ -532,15 +532,15 @@ def run(num=None):
 						print >>warn, "W: feed gone; deleting", f.url
 						feeds.remove(f)
 						continue
-				
+
 				http_status = r.get('status', 200)
 				if VERBOSE > 1: print >>warn, "I: http status", http_status
 				http_headers = r.get('headers', {
-				  'content-type': 'application/rss+xml', 
+				  'content-type': 'application/rss+xml',
 				  'content-length':'1'})
 				exc_type = r.get("bozo_exception", Exception()).__class__
 				if http_status != 304 and not r.entries and not r.get('version', ''):
-					if http_status not in [200, 302]: 
+					if http_status not in [200, 302]:
 						print >>warn, "W: error %d [%d] %s" % (http_status, feednum, f.url)
 
 					elif contains(http_headers.get('content-type', 'rss'), 'html'):
@@ -551,13 +551,13 @@ def run(num=None):
 
 					elif hasattr(socket, 'timeout') and exc_type == socket.timeout:
 						print >>warn, "W: timed out on [%d] %s" % (feednum, f.url)
-					
+
 					elif exc_type == IOError:
 						print >>warn, 'W: "%s" [%d] %s' % (r.bozo_exception, feednum, f.url)
-					
+
 					elif hasattr(feedparser, 'zlib') and exc_type == feedparser.zlib.error:
 						print >>warn, "W: broken compression [%d] %s" % (feednum, f.url)
-					
+
 					elif exc_type in socket_errors:
 						exc_reason = r.bozo_exception.args[1]
 						print >>warn, "W: %s [%d] %s" % (exc_reason, feednum, f.url)
@@ -568,13 +568,13 @@ def run(num=None):
 						else:
 							exc_reason = r.bozo_exception.reason
 						print >>warn, "W: %s [%d] %s" % (exc_reason, feednum, f.url)
-					
+
 					elif exc_type == AttributeError:
 						print >>warn, "W: %s [%d] %s" % (r.bozo_exception, feednum, f.url)
-					
+
 					elif exc_type == KeyboardInterrupt:
 						raise r.bozo_exception
-						
+
 					elif r.bozo:
 						print >>warn, 'E: error in [%d] "%s" feed (%s)' % (feednum, f.url, r.get("bozo_exception", "can't process"))
 
@@ -590,25 +590,25 @@ def run(num=None):
 						print >>warn, "Python", sys.version
 						print >>warn, "=== END HERE ==="
 					continue
-				
+
 				r.entries.reverse()
-				
+
 				for entry in r.entries:
 					id = getID(entry)
-					
+
 					# If TRUST_GUID isn't set, we get back hashes of the content.
 					# Instead of letting these run wild, we put them in context
 					# by associating them with the actual ID (if it exists).
-					
+
 					frameid = entry.get('id')
 					if not(frameid): frameid = id
 					if type(frameid) is DictType:
 						frameid = frameid.values()[0]
-	
+
 					# If this item's ID is in our database
 					# then it's already been sent
 					# and we don't need to do anything more.
-					
+
 					if frameid in f.seen:
 						if f.seen[frameid] == id: continue
 
@@ -616,7 +616,7 @@ def run(num=None):
 						print "No default email address defined. Please run 'r2e email emailaddress'"
 						print "Ignoring feed %s" % f.url
 						break
-					
+
 					if 'title_detail' in entry and entry.title_detail:
 						title = entry.title_detail.value
 						if contains(entry.title_detail.type, 'html'):
@@ -625,18 +625,18 @@ def run(num=None):
 						title = getContent(entry)[:70]
 
 					title = title.replace("\n", " ").strip()
-					
+
 					datetime = time.gmtime()
 
 					if DATE_HEADER:
 						for datetype in DATE_HEADER_ORDER:
 							kind = datetype+"_parsed"
 							if kind in entry and entry[kind]: datetime = entry[kind]
-						
+
 					link = entry.get('link', "")
-					
+
 					from_addr = getEmail(r.feed, entry)
-					
+
 					name = h2t.unescape(getName(r, entry))
 					fromhdr = formataddr((name, from_addr,))
 					tohdr = (f.to or default_to)
@@ -650,25 +650,25 @@ def run(num=None):
 							if pos > 0:
 								extraheaders[hdr[:pos]] = hdr[pos+1:].strip()
 							else:
-								print >>warn, "W: malformed BONUS HEADER", BONUS_HEADER	
-					
+								print >>warn, "W: malformed BONUS HEADER", BONUS_HEADER
+
 					entrycontent = getContent(entry, HTMLOK=HTML_MAIL)
 					contenttype = 'plain'
 					content = ''
 					if USE_CSS_STYLING and HTML_MAIL:
 						contenttype = 'html'
-						content = "<html>\n" 
+						content = "<html>\n"
 						content += '<head><style><!--' + STYLE_SHEET + '//--></style></head>\n'
 						content += '<body>\n'
 						content += '<div id="entry">\n'
 						content += '<h1'
 						content += ' class="header"'
-						content += '><a href="'+link+'">'+subjecthdr+'</a></h1>\n'	
+						content += '><a href="'+link+'">'+subjecthdr+'</a></h1>\n'
 						if ishtml(entrycontent):
 							body = entrycontent[1].strip()
 						else:
 							body = entrycontent.strip()
-						if body != '':	
+						if body != '':
 							content += '<div id="body"><table><tr><td>\n' + body + '</td></tr></table></div>\n'
 						content += '\n<p class="footer">URL: <a href="'+link+'">'+link+'</a>'
 						if hasattr(entry,'enclosures'):
@@ -685,15 +685,15 @@ def run(num=None):
 									content += '<br/>Via: <a href="'+extraurl+'">'+extralink['title']+'</a>\n'
 						content += '</p></div>\n'
 						content += "\n\n</body></html>"
-					else:	
+					else:
 						if ishtml(entrycontent):
 							contenttype = 'html'
-							content = "<html>\n" 
-							content = ("<html><body>\n\n" + 
+							content = "<html>\n"
+							content = ("<html><body>\n\n" +
 							           '<h1><a href="'+link+'">'+subjecthdr+'</a></h1>\n\n' +
 							           entrycontent[1].strip() + # drop type tag (HACK: bad abstraction)
 							           '<p>URL: <a href="'+link+'">'+link+'</a></p>' )
-							           
+
 							if hasattr(entry,'enclosures'):
 								for enclosure in entry.enclosures:
 									if enclosure.url != "":
@@ -702,7 +702,7 @@ def run(num=None):
 								for extralink in entry.links:
 									if ('rel' in extralink) and extralink['rel'] == u'via':
 										content += 'Via: <a href="'+extralink['href']+'">'+extralink['title']+'</a><br/>\n'
-							
+
 							content += ("\n</body></html>")
 						else:
 							content = entrycontent.strip() + "\n\nURL: "+link
@@ -716,9 +716,9 @@ def run(num=None):
 										content += '<a href="'+extralink['href']+'">Via: '+extralink['title']+'</a>\n'
 
 					smtpserver = send(fromhdr, tohdr, subjecthdr, content, contenttype, extraheaders, smtpserver)
-			
+
 					f.seen[frameid] = id
-					
+
 				f.etag, f.modified = r.get('etag', None), r.get('modified', None)
 			except (KeyboardInterrupt, SystemExit):
 				raise
@@ -735,7 +735,7 @@ def run(num=None):
 				print >>warn, "=== END HERE ==="
 				continue
 
-	finally:		
+	finally:
 		unlock(feeds, feedfileObject)
 		if smtpserver:
 			smtpserver.quit()
@@ -743,7 +743,7 @@ def run(num=None):
 def list():
 	feeds, feedfileObject = load(lock=0)
 	default_to = ""
-	
+
 	if feeds and isstr(feeds[0]):
 		default_to = feeds[0]; ifeeds = feeds[1:]; i=1
 		print "default email:", default_to
@@ -766,7 +766,7 @@ def delete(n):
 		if n != len(feeds):
 			print >>warn, "W: feed IDs have changed, list before deleting again"
 	unlock(feeds, feedfileObject)
-	
+
 def reset():
 	feeds, feedfileObject = load()
 	if feeds and isstr(feeds[0]):
@@ -777,9 +777,9 @@ def reset():
 		f.seen = {}
 		f.etag = None
 		f.modified = None
-	
+
 	unlock(feeds, feedfileObject)
-	
+
 def email(addr):
 	feeds, feedfileObject = load()
 	if feeds and isstr(feeds[0]): feeds[0] = addr
@@ -791,8 +791,8 @@ if __name__ == '__main__':
 	try:
 		if len(args) < 3: raise InputError, "insufficient args"
 		feedfile, action, args = args[1], args[2], args[3:]
-		
-		if action == "run": 
+
+		if action == "run":
 			if args and args[0] == "--no-send":
 				def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtpserver=None):
 					if VERBOSE: print 'Not sending:', unu(subject)
@@ -808,7 +808,7 @@ if __name__ == '__main__':
 
 		elif action == "add": add(*args)
 
-		elif action == "new": 
+		elif action == "new":
 			if len(args) == 1: d = [args[0]]
 			else: d = []
 			pickle.dump(d, open(feedfile, 'w'))
@@ -829,7 +829,7 @@ if __name__ == '__main__':
 
 		else:
 			raise InputError, "Invalid action"
-		
+
 	except InputError, e:
 		print "E:", e
 		print

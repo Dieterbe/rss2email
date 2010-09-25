@@ -21,17 +21,17 @@ DATE_HEADER = 1
 
 # A tuple consisting of some combination of
 # ('issued', 'created', 'modified', 'expired')
-# expressing ordered list of preference in dates 
+# expressing ordered list of preference in dates
 # to use for the Date header of the email.
 DATE_HEADER_ORDER = ('modified', 'issued', 'created')
 
 # 1: Apply Q-P conversion (required for some MUAs).
 # 0: Send message in 8-bits.
 # http://cr.yp.to/smtp/8bitmime.html
-#DEPRECATED 
+#DEPRECATED
 QP_REQUIRED = 0
-#DEPRECATED 
-	
+#DEPRECATED
+
 # 1: Name feeds as they're being processed.
 # 0: Keep quiet.
 VERBOSE = 0
