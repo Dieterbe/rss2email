@@ -2,7 +2,7 @@ v2.66 (2009-12-21)
 
     * Complete packaging of all necessary source files (rss2email, html2text, feedparser, r2e, etc.) into one bundle
       o Included a more complete config.py with all options
-      o Default to HTML mail and CSS results 
+      o Default to HTML mail and CSS results
     * Added 'reset' command to erase history of already seen entries
     * Changed project email to 'lindsey@allthingsrss.com' and project homepage to 'http://www.allthingsrss.com/rss2email/'
     * Made exception and error output text more useful

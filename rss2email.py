@@ -9,9 +9,9 @@ Usage:
 __version__ = "2.66-xdg"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
-___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess", 
-                     "Matej Cepl", "Martin 'Joey' Schulze", 
-                     "Marcel Ackermann (http://www.DreamFlasher.de)", 
+___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess",
+                     "Matej Cepl", "Martin 'Joey' Schulze",
+                     "Marcel Ackermann (http://www.DreamFlasher.de)",
                      "Lindsey Smith", "Aaron Swartz (original author)",
 		     "Dieter Plaetinck" ]
 
@@ -46,17 +46,17 @@ DATE_HEADER = 0
 
 # A tuple consisting of some combination of
 # ('issued', 'created', 'modified', 'expired')
-# expressing ordered list of preference in dates 
+# expressing ordered list of preference in dates
 # to use for the Date header of the email.
 DATE_HEADER_ORDER = ('modified', 'issued', 'created')
 
 # 1: Apply Q-P conversion (required for some MUAs).
 # 0: Send message in 8-bits.
 # http://cr.yp.to/smtp/8bitmime.html
-#DEPRECATED 
+#DEPRECATED
 QP_REQUIRED = 0
-#DEPRECATED 
-	
+#DEPRECATED
+
 # 1: Show debug messages on CLI and logfile (when enabled).
 # 0: Only show messages level info and higher.
 DEBUG = 0
@@ -102,20 +102,20 @@ CHARSET_LIST='US-ASCII', 'BIG5', 'ISO-2022-JP', 'ISO-8859-1', 'UTF-8'
 from email.MIMEText import MIMEText
 from email.Header import Header
 from email.Utils import parseaddr, formataddr
-			 
+
 # Note: You can also override the send function.
 
 def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtpserver=None):
 	"""Send an email.
-	
+
 	All arguments should be Unicode strings (plain ASCII works as well).
-	
+
 	Only the real name part of sender and recipient addresses may contain
 	non-ASCII characters.
-	
+
 	The email will be properly MIME encoded and delivered though SMTP to
 	localhost port 25.  This is easy to change if you want something different.
-	
+
 	The charset of the email will be the first one out of the list
 	that can represent all the characters occurring in the email.
 	"""
@@ -123,7 +123,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 	# Header class is smart enough to try US-ASCII, then the charset we
 	# provide, then fall back to UTF-8.
 	header_charset = 'ISO-8859-1'
-	
+
 	# We must choose the body charset manually
 	for body_charset in CHARSET_LIST:
 	    try:
@@ -136,16 +136,16 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 	# Split real name (which is optional) and email address parts
 	sender_name, sender_addr = parseaddr(sender)
 	recipient_name, recipient_addr = parseaddr(recipient)
-	
+
 	# We must always pass Unicode strings to Header, otherwise it will
 	# use RFC 2047 encoding even on plain ASCII strings.
 	sender_name = str(Header(unicode(sender_name), header_charset))
 	recipient_name = str(Header(unicode(recipient_name), header_charset))
-	
+
 	# Make sure email addresses do not contain non-ASCII characters
 	sender_addr = sender_addr.encode('ascii')
 	recipient_addr = recipient_addr.encode('ascii')
-	
+
 	# Create the message ('plain' stands for Content-Type: text/plain)
 	msg = MIMEText(body.encode(body_charset), contenttype, body_charset)
 	msg['To'] = formataddr((recipient_name, recipient_addr))
@@ -155,23 +155,23 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 			msg[hdr] = Header(unicode(extraheaders[hdr], header_charset))
 		except:
 			msg[hdr] = Header(extraheaders[hdr])
-		
+
 	fromhdr = formataddr((sender_name, sender_addr))
 	msg['From'] = fromhdr
-		
+
 	msg_as_string = msg.as_string()
 #DEPRECATED 	if QP_REQUIRED:
 #DEPRECATED 		ins, outs = SIO(msg_as_string), SIO()
 #DEPRECATED 		mimify.mimify(ins, outs)
 #DEPRECATED 		msg_as_string = outs.getvalue()
-    		
+
 
 	logging.info ('Sending: %s', unu(subject))
 
 	if SMTP_SEND:
-		if not smtpserver: 
+		if not smtpserver:
 			import smtplib
-			
+
 			try:
 				smtpserver = smtplib.SMTP(SMTP_SERVER)
 			except KeyboardInterrupt:
@@ -182,7 +182,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 				if hasattr(e, 'reason'):
 					logging.critical ("Reason: %s", e.reason)
 				sys.exit(1)
-					
+
 			if AUTHREQUIRED:
 				try:
 					smtpserver.ehlo()
@@ -197,7 +197,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 					if hasattr(e, 'reason'):
 						logging.critical ("Reason: %s", e.reason)
 					sys.exit(1)
-					
+
 		smtpserver.sendmail(sender, recipient, msg_as_string)
 		return smtpserver
 
@@ -271,7 +271,7 @@ for path in [CACHE_DIR, DATA_DIR, CONFIG_DIR]:
 
 # Read options from config file if present.
 import sys
-sys.path.insert(0,CONFIG_DIR) 
+sys.path.insert(0,CONFIG_DIR)
 try:
 	from config import *
 except:
@@ -316,18 +316,18 @@ except ImportError:
 unix = 0
 try:
 	import fcntl
-# A pox on SunOS file locking methods	
-	if (sys.platform.find('sunos') == -1): 
+# A pox on SunOS file locking methods
+	if (sys.platform.find('sunos') == -1):
 		unix = 1
 except:
 	pass
-		
+
 import socket; socket_errors = []
 for e in ['error', 'gaierror']:
 	if hasattr(socket, e): socket_errors.append(getattr(socket, e))
 
-#DEPRECATED import mimify 
-#DEPRECATED from StringIO import StringIO as SIO 
+#DEPRECATED import mimify
+#DEPRECATED from StringIO import StringIO as SIO
 #DEPRECATED mimify.CHARSET = 'utf-8'
 
 import feedparser
@@ -358,13 +358,13 @@ def timelimit(timeout, function):
                     threading.Thread.__init__(self)
                     self.result = None
                     self.error = None
-                
+
                 def run(self):
                     try:
                         self.result = function(*args, **kw)
                     except:
                         self.error = sys.exc_info()
-            
+
             c = Calculator()
             c.setDaemon(True) # don't hold up exiting
             c.start()
@@ -376,7 +376,7 @@ def timelimit(timeout, function):
             return c.result
         return internal2
 #    return internal
-    
+
 
 def isstr(f): return isinstance(f, type('')) or isinstance(f, type(u''))
 def ishtml(t): return type(t) is type(())
@@ -390,10 +390,10 @@ def unu(s): # I / freakin' hate / that unicode
 def getContent(entry, HTMLOK=0):
 	"""Select the best content from an entry, deHTMLizing if necessary.
 	If raw HTML is best, an ('HTML', best) tuple is returned. """
-	
+
 	# How this works:
-	#  * We have a bunch of potential contents. 
-	#  * We continue looking for our first choice. 
+	#  * We have a bunch of potential contents.
+	#  * We continue looking for our first choice.
 	#    (HTML or text, depending on HTMLOK)
 	#  * If that doesn't work, we continue looking for our second choice.
 	#  * If that still doesn't work, we just take the first one.
@@ -402,27 +402,27 @@ def getContent(entry, HTMLOK=0):
 	#  * Instead of just taking the first one
 	#    pick the one in the "best" language.
 	#  * HACK: hardcoded HTMLOK, should take a tuple of media types
-	
+
 	conts = entry.get('content', [])
-	
+
 	if entry.get('summary_detail', {}):
 		conts += [entry.summary_detail]
-	
+
 	if conts:
 		if HTMLOK:
 			for c in conts:
 				if contains(c.type, 'html'): return ('HTML', c.value)
-	
+
 		if not HTMLOK: # Only need to convert to text if HTML isn't OK
 			for c in conts:
 				if contains(c.type, 'html'):
 					return html2text(c.value)
-		
+
 		for c in conts:
 			if c.type == 'text/plain': return c.value
-	
-		return conts[0].value	
-	
+
+		return conts[0].value
+
 	return ""
 
 def getID(entry):
@@ -441,7 +441,7 @@ def getName(r, entry):
 	feed = r.feed
 	if hasattr(r, "url") and r.url in OVERRIDE_FROM.keys():
 		return OVERRIDE_FROM[r.url]
-	
+
 	name = feed.get('title', '')
 
 	if 'name' in entry.get('author_detail', []): # normally {} but py2.1
@@ -457,29 +457,29 @@ def getName(r, entry):
 		if feed.author_detail.name:
 			if name: name += ", "
 			name += feed.author_detail.name
-	
+
 	return name
 
 def getEmail(feed, entry):
 	"""Get the best email_address."""
 
 	if FORCE_FROM: return DEFAULT_FROM
-	
+
 	if 'email' in entry.get('author_detail', []):
 		return entry.author_detail.email
-	
+
 	if 'email' in feed.get('author_detail', []):
 		return feed.author_detail.email
-		
+
 	#TODO: contributors
-	
+
 	if USE_PUBLISHER_EMAIL:
 		if 'email' in feed.get('publisher_detail', []):
 			return feed.publisher_detail.email
-		
+
 		if feed.get("errorreportsto", ''):
 			return feed.errorreportsto
-			
+
 	return DEFAULT_FROM
 
 ### Simple Database of Feeds ###
@@ -510,14 +510,14 @@ def load():
 				if (len(fields) > 1):
 					to = fields[1]
 				# yes, we store the url twice.  not the most efficient, but like this
-				# you can do fast lookups and have a normal Feed object	
+				# you can do fast lookups and have a normal Feed object
 				logging.debug ("loading: %s" % url)
 				feeds[url] = Feed(url, to)
 	except IOError, e:
 		logging.critical ("Feedfile could not be opened: %s", e)
 		sys.exit(1)
 
-	# Then, add info about where we left off (seen entries), if available	
+	# Then, add info about where we left off (seen entries), if available
 	if os.path.exists(FEEDS_STATE):
 		try:
 			statefile = open(FEEDS_STATE, 'r')
@@ -554,15 +554,15 @@ def save(feeds):
 		logging.error ( "Could not write to state file %s: %s", FEEDS_STATE, e)
 		sys.exit(1)
 
-#@timelimit(FEED_TIMEOUT)		
+#@timelimit(FEED_TIMEOUT)
 def parse(url, etag, modified):
 	if PROXY == '':
 		return feedparser.parse(url, etag, modified)
 	else:
 		proxy = urllib2.ProxyHandler( {"http":PROXY} )
-		return feedparser.parse(url, etag, modified, handlers = [proxy])	
-	
-		
+		return feedparser.parse(url, etag, modified, handlers = [proxy])
+
+
 ### Program Functions ###
 
 def run():
@@ -570,9 +570,9 @@ def run():
 	smtpserver = None
 	try:
 		default_to = DEFAULT_TO
-		
+
 		for url, f in feeds.items():
-			try: 
+			try:
 				logging.info ('Processing "%s"', f.url)
 				r = {}
 				try:
@@ -580,22 +580,22 @@ def run():
 				except TimeoutError:
 					logging.warning ('Feed "%s" timed out', f.url)
 					continue
-				
+
 				# Handle various status conditions, as required
 				if 'status' in r:
 					if r.status == 301: f.url = r['url']
 					elif r.status == 410:
 						logging.warning ("Feed %s gone", f.url)
 						continue
-				
+
 				http_status = r.get('status', 200)
 				logging.info ("Http status %s", http_status)
 				http_headers = r.get('headers', {
-				  'content-type': 'application/rss+xml', 
+				  'content-type': 'application/rss+xml',
 				  'content-length':'1'})
 				exc_type = r.get("bozo_exception", Exception()).__class__
 				if http_status != 304 and not r.entries and not r.get('version', ''):
-					if http_status not in [200, 302]: 
+					if http_status not in [200, 302]:
 						logging.warning ("Error %d %s", http_status, f.url)
 
 					elif contains(http_headers.get('content-type', 'rss'), 'html'):
@@ -606,13 +606,13 @@ def run():
 
 					elif hasattr(socket, 'timeout') and exc_type == socket.timeout:
 						logging.warning ("Timed out on %s", f.url)
-					
+
 					elif exc_type == IOError:
 						logging.warning ('"%s" %s', r.bozo_exception, f.url)
-					
+
 					elif hasattr(feedparser, 'zlib') and exc_type == feedparser.zlib.error:
 						logging.warning ("Broken compression %s", f.url)
-					
+
 					elif exc_type in socket_errors:
 						exc_reason = r.bozo_exception.args[1]
 						logging.warning ("%s %s", exc_reason, f.url)
@@ -623,13 +623,13 @@ def run():
 						else:
 							exc_reason = r.bozo_exception.reason
 						logging.warning ("%s %s", exc_reason, f.url)
-					
+
 					elif exc_type == AttributeError:
 						logging.warning ("%s %s", r.bozo_exception, f.url)
-					
+
 					elif exc_type == KeyboardInterrupt:
 						raise r.bozo_exception
-						
+
 					elif r.bozo:
 						logging.warning ('Error in "%s" feed (%s)', f.url, r.get("bozo_exception", "can't process"))
 
@@ -644,29 +644,29 @@ def run():
 						logging.warning ("Python %s", sys.version)
 						logging.warning ("=== END HERE ===")
 					continue
-				
+
 				r.entries.reverse()
-				
+
 				for entry in r.entries:
 					id = getID(entry)
-					
+
 					# If TRUST_GUID isn't set, we get back hashes of the content.
 					# Instead of letting these run wild, we put them in context
 					# by associating them with the actual ID (if it exists).
-					
+
 					frameid = entry.get('id', id)
-					
+
 					# If this item's ID is in our database
 					# then it's already been sent
 					# and we don't need to do anything more.
-					
+
 					if f.seen.has_key(frameid) and f.seen[frameid] == id: continue
 
 					if not (f.to or default_to):
 						logging.warning ("No default email address defined and none given for this feed." )
 						logging.warning ("Ignoring feed %s", f.url)
 						break
-					
+
 					if 'title_detail' in entry and entry.title_detail:
 						title = entry.title_detail.value
 						if contains(entry.title_detail.type, 'html'):
@@ -675,18 +675,18 @@ def run():
 						title = getContent(entry)[:70]
 
 					title = title.replace("\n", " ").strip()
-					
+
 					datetime = time.gmtime()
 
 					if DATE_HEADER:
 						for datetype in DATE_HEADER_ORDER:
 							kind = datetype+"_parsed"
 							if kind in entry and entry[kind]: datetime = entry[kind]
-						
+
 					link = entry.get('link', "")
-					
+
 					from_addr = getEmail(r.feed, entry)
-					
+
 					name = getName(r, entry)
 					fromhdr = '"'+ name + '" <' + from_addr + ">"
 					tohdr = (f.to or default_to)
@@ -701,13 +701,13 @@ def run():
 								extraheaders[hdr[:pos]] = hdr[pos+1:].strip()
 							else:
 								logging.warning ("Malformed BONUS HEADER %s", BONUS_HEADER)
-					
+
 					entrycontent = getContent(entry, HTMLOK=HTML_MAIL)
 					contenttype = 'plain'
 					content = ''
 					if USE_CSS_STYLING and HTML_MAIL:
 						contenttype = 'html'
-						content = "<html>\n" 
+						content = "<html>\n"
 						content += '<head><style><!--' + STYLE_SHEET + '//--></style></head>\n'
 						content += '<body>\n'
 						content += '<div id="entry">\n'
@@ -718,7 +718,7 @@ def run():
 							body = entrycontent[1].strip()
 						else:
 							body = entrycontent.strip()
-						if body != '':	
+						if body != '':
 							content += '<div id="body"><table><tr><td>\n' + body + '</td></tr></table></div>\n'
 						content += '\n<p class="footer">URL: <a href="'+link+'">'+link+'</a>'
 						if hasattr(entry,'enclosures'):
@@ -729,20 +729,20 @@ def run():
 									content += ('<br/>Enclosure: <a href="'+enclosure.src+'">'+enclosure.src+'</a><br/><img src="'+enclosure.src+'"\n')
 						content += '</p></div>\n'
 						content += "\n\n</body></html>"
-					else:	
+					else:
 						if ishtml(entrycontent):
 							contenttype = 'html'
-							content = "<html>\n" 
-							content = ("<html><body>\n\n" + 
+							content = "<html>\n"
+							content = ("<html><body>\n\n" +
 							           '<h1><a href="'+link+'">'+subjecthdr+'</a></h1>\n\n' +
 							           entrycontent[1].strip() + # drop type tag (HACK: bad abstraction)
 							           '<p>URL: <a href="'+link+'">'+link+'</a></p>' )
-							           
+
 							if hasattr(entry,'enclosures'):
 								for enclosure in entry.enclosures:
 									if enclosure.url != "":
 										content += ('Enclosure: <a href="'+enclosure.url+'">'+enclosure.url+"</a><br/>\n")
-							
+
 							content += ("\n</body></html>")
 						else:
 							content = entrycontent.strip() + "\n\nURL: "+link
@@ -752,9 +752,9 @@ def run():
 										content += ('\nEnclosure: ' + enclosure.url + "\n")
 
 					smtpserver = send(fromhdr, tohdr, subjecthdr, content, contenttype, extraheaders, smtpserver)
-			
+
 					f.seen[frameid] = id
-					
+
 				f.etag, f.modified = r.get('etag', None), r.get('modified', None)
 			except (KeyboardInterrupt, SystemExit):
 				raise
@@ -771,7 +771,7 @@ def run():
 				logging.warning ("=== END HERE ===")
 				continue
 
-	finally:		
+	finally:
 		save(feeds)
 		if smtpserver:
 			smtpserver.quit()
@@ -781,8 +781,8 @@ if __name__ == '__main__':
 	try:
 		if len(args) < 2: raise InputError, "insufficient args"
 		action, args = args[1], args[2:]
-		
-		if action == "run": 
+
+		if action == "run":
 			if args and args[0] == "--no-send":
 				def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtpserver=None):
 					logging.info ('Not sending: %s', unu(subject))
@@ -793,7 +793,7 @@ if __name__ == '__main__':
 
 		else:
 			raise InputError, "Invalid action"
-		
+
 	except InputError, e:
 		logging.error (e)
 		logging.error (__doc__)
