@@ -546,6 +546,7 @@ def save(feeds):
 
 	except IOError, e:
 		logging.error ( "Could not write to state file %s: %s", FEEDS_STATE, e)
+		sys.exit(1)
 
 #@timelimit(FEED_TIMEOUT)		
 def parse(url, etag, modified):
