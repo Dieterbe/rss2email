@@ -535,11 +535,17 @@ def load():
 	return feeds
 
 def save(feeds):
-	'''Overwrite the state of all feeds'''
-	# TODO: for feeds that are temporarily disabled, we will erase the state.  We should nicely update
-	# the entries for the specific feeds instead
-	try:
+	'''Add/update all seen entries of all loaded feeds to the state file'''
+	if os.path.exists(FEEDS_STATE):
+		try:
+			statefile = open(FEEDS_STATE, 'r')
+		except IOError, e:
+			logging.critical ( "Feed state file %s could not be opened: %s.  Cannot merge new info into old", FEEDS_STATE, e)
+			sys.exit(1)
+		feeds_state = pickle.load(statefile)
+	else:
 		feeds_state = {}
+	try:
 		for url, feed in feeds.items():
 			feeds_state[url] = feed.seen
 		pickle.dump(feeds_state, open(FEEDS_STATE, 'w'))
