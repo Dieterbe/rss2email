@@ -1,4 +1,4 @@
 dependencies:
  * python
- * feedparser (4.2 or svn version)
+ * feedparser (4.1 or higher)
  * html2text (2.37 or higher)
