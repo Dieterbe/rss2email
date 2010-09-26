@@ -24,3 +24,8 @@ to work on Windows as well, but I leave that to someone else.
 Other improvements:
 - better logging / debugging using python builtins over NIH cruft
 - support for temporary disabling feeds (by commenting them out)
+
+== Dependencies ==
+ * python
+ * feedparser (4.2 or svn version)
+ * html2text (2.37 or higher)
