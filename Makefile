@@ -11,7 +11,6 @@ install:
 	install -D -m755 r2e               $(INSTALLDIR)/bin
 	install -D -m755 rss2email.py      $(INSTALLDIR)/bin
 	install -D -m644 README            $(SHAREDIR)/docs
-	install -D -m644 readme.html       $(SHAREDIR)/docs
 	install -D -m644 CHANGELOG         $(SHAREDIR)/docs
 	install -D -m644 config.py         $(SHAREDIR)/examples/
 

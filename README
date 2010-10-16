@@ -1,4 +1,4 @@
-== Goals ==
+== Why this fork and not the original rss2email? ==
 
 Respect for your $HOME, keeping it clean.
 Good for your sanity, especially if you keep your $HOME
@@ -24,8 +24,74 @@ to work on Windows as well, but I leave that to someone else.
 Other improvements:
 - better logging / debugging using python builtins over NIH cruft
 - support for temporary disabling feeds (by commenting them out)
+- markdown readme, not in html directly
+
+However, unlike the original rss2email, this fork:
+ * has no support for Windows
+ * has no webUI
+ both are possible, but I don't need them
 
 == Dependencies ==
  * python
  * feedparser (4.1 or higher)
  * html2text (2.37 or higher)
+ * optional: sendmail or sendmail-compatible MTA (can also smtp to remote host)
+
+== Defining your feeds ==
+
+    $EDITOR $XDG_CONFIG_HOME/r2e/feeds
+
+Each feed on a line, if you want to customize the email adress to send to,
+put whitespace after the url and then the email address.
+You can temporarily disable feeds by commenting them out (prefix with a '#').
+
+== Running rss2email ==
+When you run rss2email, it emails you about every story it hasn't seen before.
+But the first time you run it, that will be every story. To avoid this,
+you can ask rss2email not to send you any stories the first time you run it:
+
+  r2e run --no-send
+
+Then later, you can ask it to email you new stories:
+
+    r2e run
+
+You probably want to set things up so that this command is run repeatedly.
+Cron is your friend.
+
+If you get an error message "Sender domain must exist",
+add a line to `config.py` like this:
+
+    DEFAULT_FROM = rss2email@yoursite.com
+
+You can make the email address whatever you want,
+but your mail server requires that the yoursite.com part actually exists.
+
+
+== Configuration ==
+
+There are a some configuration options.
+They are described along with their default values at the top of rss2email.py.
+To override them, create a new config.py or base yourself on the example one
+shipped with this program. (usually found in /usr/share/rss2email)
+
+    $EDITOR $XDG_CONFIG_HOME/r2e/config.py
+
+Some examples:
+
+If you want to receive HTML mail, instead of having entries converted
+to plain text:
+
+    HTML_MAIL = 1
+
+To be notified every time a post changes,
+instead of just when it's first posted:
+
+    TRUST_GUID = 0
+
+And to make the emails look as if they were sent when the item was posted:
+
+  DATE_HEADER = 1
+
+For a full overview of options, please refer to rss2email.py or
+the sample config.py

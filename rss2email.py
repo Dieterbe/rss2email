@@ -20,7 +20,7 @@ from os.path import join
 
 urllib2.install_opener(urllib2.build_opener())
 
-### Vaguely Customizable Options ###
+### Options which can be overridden in your config.py ###
 
 # The email address messages are from by default:
 DEFAULT_FROM = "bozo@dev.null.invalid"
