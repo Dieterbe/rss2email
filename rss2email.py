@@ -99,6 +99,19 @@ PROXY=""
 # Eventually (and theoretically) ISO-8859-1 and UTF-8 are our catch-all failsafes
 CHARSET_LIST='US-ASCII', 'BIG5', 'ISO-2022-JP', 'ISO-8859-1', 'UTF-8'
 
+## html2text options ##
+
+# Use Unicode characters instead of their ascii psuedo-replacements
+UNICODE_SNOB = 0
+
+# Put the links after each paragraph instead of at the end.
+LINKS_EACH_PARAGRAPH = 0
+
+# Wrap long lines at position. 0 for no wrapping. (Requires Python 2.3.)
+BODY_WIDTH = 0
+
+
+
 from email.MIMEText import MIMEText
 from email.Header import Header
 from email.Utils import parseaddr, formataddr
@@ -223,17 +236,6 @@ SMTP_PASS = 'password'  # for SMTP AUTH, set SMTP password here
 ''')
 			sys.exit(1)
 		return None
-
-## html2text options ##
-
-# Use Unicode characters instead of their ascii psuedo-replacements
-UNICODE_SNOB = 0
-
-# Put the links after each paragraph instead of at the end.
-LINKS_EACH_PARAGRAPH = 0
-
-# Wrap long lines at position. 0 for no wrapping. (Requires Python 2.3.)
-BODY_WIDTH = 0
 
 
 ### Set up locations
