@@ -1,5 +1,5 @@
 == Dependencies ==
- * python
+ * python (2.3 or higher)
  * feedparser (4.1 or higher)
  * html2text (2.37 or higher)
  * optional: sendmail or sendmail-compatible MTA (can also smtp to remote host)
