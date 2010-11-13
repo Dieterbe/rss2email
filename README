@@ -95,3 +95,16 @@ And to make the emails look as if they were sent when the item was posted:
 
 For a full overview of options, please refer to rss2email.py or
 the sample config.py
+
+== Opml import/export ==
+
+Use this to generate a opml export of all your active feeds,
+which you can store in an .opml file:
+
+	rss2email.py opmlexport
+
+Similarly, you can generate a plaintext view of an opml file, suitable for
+storing in your $XDG_CONFIG_HOME/r2e/feeds like this:
+
+	rss2email.py opmlimport <filename>
+

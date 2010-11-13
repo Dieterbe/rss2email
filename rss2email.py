@@ -5,8 +5,10 @@ http://rss2email.infogami.com
 Usage:
   run [--no-send]
   help (or --help, -h) (see this)
+  opmlexport
+  opmlimport filename
 """
-__version__ = "2.67-xdg"
+__version__ = "2.68-xdg"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
 ___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess",
@@ -803,6 +805,42 @@ def run():
 		if smtpserver:
 			smtpserver.quit()
 
+def opmlexport():
+	import xml.sax.saxutils
+	feeds = load()
+
+	if feeds:
+		print '<?xml version="1.0" encoding="UTF-8"?>\n<opml version="1.0">\n<head>\n<title>rss2email OPML export</title>\n</head>\n<body>'
+		for url in feeds:
+			url = xml.sax.saxutils.escape(url)
+			print '<outline type="rss" text="%s" xmlUrl="%s"/>' % (url, url)
+		print '</body>\n</opml>'
+
+def opmlimport(importfile):
+	importfileObject = None
+	print 'Importing feeds from', importfile
+	if not os.path.exists(importfile):
+		logging.warning ('OPML import file "%s" does not exist.' % importfile)
+	try:
+		importfileObject = open(importfile, 'r')
+	except IOError, e:
+		logging.critical ("OPML import file could not be opened: %s", e)
+		sys.exit(1)
+	try:
+		import xml.dom.minidom
+		dom = xml.dom.minidom.parse(importfileObject)
+		newfeeds = dom.getElementsByTagName('outline')
+	except:
+		logging.critical ('Unable to parse OPML file')
+		sys.exit(1)
+
+	import xml.sax.saxutils
+
+	for f in newfeeds:
+		if f.hasAttribute('xmlUrl'):
+			feedurl = f.getAttribute('xmlUrl')
+			print feedurl
+
 if __name__ == '__main__':
 	args = sys.argv
 	try:
@@ -817,6 +855,13 @@ if __name__ == '__main__':
 			run()
 
 		elif action in ("help", "--help", "-h"): print __doc__
+
+		elif action == "opmlexport": opmlexport()
+
+		elif action == "opmlimport":
+			if not args:
+				raise InputError, "OPML import '%s' requires a filename argument" % action
+			opmlimport(args[0])
 
 		else:
 			raise InputError, "Invalid action"
