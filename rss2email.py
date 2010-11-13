@@ -10,9 +10,13 @@ Usage:
   list
   reset
   delete n
+  pause n
+  unpause n
+  opmlexport
+  opmlimport filename
   help (or --help, -h) (see this)
 """
-__version__ = "2.67"
+__version__ = "2.69"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
 ___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess",
@@ -74,12 +78,24 @@ AUTHREQUIRED = 0 # if you need to use SMTP AUTH set to 1
 SMTP_USER = 'username'  # for SMTP AUTH, set SMTP username here
 SMTP_PASS = 'password'  # for SMTP AUTH, set SMTP password here
 
+# Connect to the SMTP server using SSL
+SMTP_SSL = 0
+
 # Set this to add a bonus header to all emails (start with '\n').
 BONUS_HEADER = ''
 # Example: BONUS_HEADER = '\nApproved: joe@bob.org'
 
 # Set this to override From addresses. Keys are feed URLs, values are new titles.
 OVERRIDE_FROM = {}
+
+# Set this to override From email addresses. Keys are feed URLs, values are new emails.
+OVERRIDE_EMAIL = {}
+
+# Set this to default From email addresses. Keys are feed URLs, values are new email addresses.
+DEFAULT_EMAIL = {}
+
+# Only use the email from address rather than friendly name plus email address
+NO_FRIENDLY_NAME = 0
 
 # Set this to override the timeout (in seconds) for feed server response
 FEED_TIMEOUT = 60
@@ -182,7 +198,11 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 			import smtplib
 
 			try:
-				smtpserver = smtplib.SMTP(SMTP_SERVER)
+				if SMTP_SSL:
+					smtpserver = smtplib.SMTP_SSL()
+				else:
+					smtpserver = smtplib.SMTP()
+				smtpserver.connect(SMTP_SERVER)
 			except KeyboardInterrupt:
 				raise
 			except Exception, e:
@@ -196,7 +216,7 @@ def send(sender, recipient, subject, body, contenttype, extraheaders=None, smtps
 			if AUTHREQUIRED:
 				try:
 					smtpserver.ehlo()
-					smtpserver.starttls()
+					if not SMTP_SSL: smtpserver.starttls()
 					smtpserver.ehlo()
 					smtpserver.login(SMTP_USER, SMTP_PASS)
 				except KeyboardInterrupt:
@@ -395,6 +415,8 @@ def getID(entry):
 def getName(r, entry):
 	"""Get the best name."""
 
+	if NO_FRIENDLY_NAME: return ''
+
 	feed = r.feed
 	if hasattr(r, "url") and r.url in OVERRIDE_FROM.keys():
 		return OVERRIDE_FROM[r.url]
@@ -417,10 +439,15 @@ def getName(r, entry):
 
 	return name
 
-def getEmail(feed, entry):
+def getEmail(r, entry):
 	"""Get the best email_address."""
 
+	feed = r.feed
+
 	if FORCE_FROM: return DEFAULT_FROM
+
+	if r.url in OVERRIDE_EMAIL.keys():
+		return OVERRIDE_EMAIL[r.url]
 
 	if 'email' in entry.get('author_detail', []):
 		return entry.author_detail.email
@@ -437,6 +464,9 @@ def getEmail(feed, entry):
 		if feed.get("errorreportsto", ''):
 			return feed.errorreportsto
 
+	if r.url in DEFAULT_EMAIL.keys():
+		return DEFAULT_EMAIL[r.url]
+
 	return DEFAULT_FROM
 
 ### Simple Database of Feeds ###
@@ -444,6 +474,7 @@ def getEmail(feed, entry):
 class Feed:
 	def __init__(self, url, to):
 		self.url, self.etag, self.modified, self.seen = url, None, None, {}
+		self.active = True
 		self.to = to
 
 def load(lock=1):
@@ -468,6 +499,10 @@ def load(lock=1):
 		feeds = pickle.load(feedfileObject)
 		if unix:
 			fcntl.flock(feedfileObject.fileno(), locktype)
+	if feeds:
+		for feed in feeds[1:]:
+			if not hasattr(feed, 'active'):
+				feed.active = True
 
 	return feeds, feedfileObject
 
@@ -520,6 +555,8 @@ def run(num=None):
 		for f in ifeeds:
 			try:
 				feednum += 1
+				if not f.active: continue
+
 				if VERBOSE: print >>warn, 'I: Processing [%d] "%s"' % (feednum, f.url)
 				r = {}
 				try:
@@ -638,7 +675,7 @@ def run(num=None):
 
 					link = entry.get('link', "")
 
-					from_addr = getEmail(r.feed, entry)
+					from_addr = getEmail(r, entry)
 
 					name = h2t.unescape(getName(r, entry))
 					fromhdr = formataddr((name, from_addr,))
@@ -646,7 +683,7 @@ def run(num=None):
 					subjecthdr = title
 					datehdr = time.strftime("%a, %d %b %Y %H:%M:%S -0000", datetime)
 					useragenthdr = "rss2email"
-					extraheaders = {'Date': datehdr, 'User-Agent': useragenthdr, 'X-RSS-Feed': f.url, 'X-RSS-ID': id}
+					extraheaders = {'Date': datehdr, 'User-Agent': useragenthdr, 'X-RSS-Feed': f.url, 'X-RSS-ID': id, 'X-RSS-URL': link}
 					if BONUS_HEADER != '':
 						for hdr in BONUS_HEADER.strip().splitlines():
 							pos = hdr.strip().find(':')
@@ -752,10 +789,52 @@ def list():
 		print "default email:", default_to
 	else: ifeeds = feeds; i = 0
 	for f in ifeeds:
-		print `i`+':', f.url, '('+(f.to or ('default: '+default_to))+')'
+		active = ('[ ]', '[*]')[f.active]
+		print `i`+':',active, f.url, '('+(f.to or ('default: '+default_to))+')'
 		if not (f.to or default_to):
 			print "   W: Please define a default address with 'r2e email emailaddress'"
 		i+= 1
+
+def opmlexport():
+	import xml.sax.saxutils
+	feeds, feedfileObject = load(lock=0)
+
+	if feeds:
+		print '<?xml version="1.0" encoding="UTF-8"?>\n<opml version="1.0">\n<head>\n<title>rss2email OPML export</title>\n</head>\n<body>'
+		for f in feeds[1:]:
+			url = xml.sax.saxutils.escape(f.url)
+			print '<outline type="rss" text="%s" xmlUrl="%s"/>' % (url, url)
+		print '</body>\n</opml>'
+
+def opmlimport(importfile):
+	importfileObject = None
+	print 'Importing feeds from', importfile
+	if not os.path.exists(importfile):
+		print 'OPML import file "%s" does not exist.' % feedfile
+	try:
+		importfileObject = open(importfile, 'r')
+	except IOError, e:
+		print "OPML import file could not be opened: %s" % e
+		sys.exit(1)
+	try:
+		import xml.dom.minidom
+		dom = xml.dom.minidom.parse(importfileObject)
+		newfeeds = dom.getElementsByTagName('outline')
+	except:
+		print 'E: Unable to parse OPML file'
+		sys.exit(1)
+
+	feeds, feedfileObject = load(lock=1)
+
+	import xml.sax.saxutils
+
+	for f in newfeeds:
+		if f.hasAttribute('xmlUrl'):
+			feedurl = f.getAttribute('xmlUrl')
+			print 'Adding %s' % xml.sax.saxutils.unescape(feedurl)
+			feeds.append(Feed(feedurl, None))
+
+	unlock(feeds, feedfileObject)
 
 def delete(n):
 	feeds, feedfileObject = load()
@@ -768,6 +847,18 @@ def delete(n):
 		feeds = feeds[:n] + feeds[n+1:]
 		if n != len(feeds):
 			print >>warn, "W: feed IDs have changed, list before deleting again"
+	unlock(feeds, feedfileObject)
+
+def toggleactive(n, active):
+	feeds, feedfileObject = load()
+	if (n == 0) and (feeds and isstr(feeds[0])):
+		print >>warn, "W: ID has to be equal to or higher than 1"
+	elif n >= len(feeds):
+		print >>warn, "W: no such feed"
+	else:
+		action = ('Pausing', 'Unpausing')[active]
+		print >>warn, "%s feed %s" % (action, feeds[n].url)
+		feeds[n].active = active
 	unlock(feeds, feedfileObject)
 
 def reset():
@@ -828,7 +919,23 @@ if __name__ == '__main__':
 			else:
 				raise InputError, "Action '%s' requires a number as its argument" % action
 
+		elif action in ("pause", "unpause"):
+			if not args:
+				raise InputError, "Action '%s' requires an argument" % action
+			elif args[0].isdigit():
+				active = (action == "unpause")
+				toggleactive(int(args[0]), active)
+			else:
+				raise InputError, "Action '%s' requires a number as its argument" % action
+
 		elif action == "reset": reset()
+
+		elif action == "opmlexport": opmlexport()
+
+		elif action == "opmlimport":
+			if not args:
+				raise InputError, "OPML import '%s' requires a filename argument" % action
+			opmlimport(args[0])
 
 		else:
 			raise InputError, "Invalid action"
