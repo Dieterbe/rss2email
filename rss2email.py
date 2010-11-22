@@ -895,4 +895,4 @@ if __name__ == '__main__':
 	except InputError, e:
 		logging.error (e)
 		logging.error (__doc__)
-
+	logging.info ('Rss2email stopping')
