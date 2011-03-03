@@ -25,6 +25,7 @@ Other improvements:
 - better logging / debugging using python builtins over NIH cruft
 - support for temporary disabling feeds (by commenting them out)
 - markdown readme, not in html directly
+- optional script to list broken feeds
 
 However, unlike the original rss2email, this fork:
  * has no support for Windows
@@ -36,6 +37,7 @@ However, unlike the original rss2email, this fork:
  * feedparser (4.1 or higher)
  * html2text (2.37 or higher)
  * optional: sendmail or sendmail-compatible MTA (can also smtp to remote host)
+ * optional: posix sh shell for optional shellscript
 
 == Defining your feeds ==
 
