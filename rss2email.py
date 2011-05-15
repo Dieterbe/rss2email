@@ -8,7 +8,7 @@ Usage:
   opmlimport filename
   help (or --help, -h) (see this)
 """
-__version__ = "2.69-xdg"
+__version__ = "2.71-xdg"
 __author__ = "Lindsey Smith (lindsey@allthingsrss.com)"
 __copyright__ = "(C) 2004 Aaron Swartz. GNU GPL 2 or 3."
 ___contributors__ = ["Dean Jackson", "Brian Lalor", "Joey Hess",
@@ -489,34 +489,38 @@ def getName(r, entry):
 
 	return name
 
+def validateEmail(email, planb):
+	"""Do a basic quality check on email address, but return planb if email doesn't appear to be well-formed"""
+	email_parts = email.split('@')
+	if len(email_parts) != 2:
+		return planb
+	return email
+
 def getEmail(r, entry):
-	"""Get the best email_address."""
+	"""Get the best email_address. If the best guess isn't well-formed (something@somthing.com), use DEFAULT_FROM instead"""
 
 	feed = r.feed
 
 	if FORCE_FROM: return DEFAULT_FROM
 
-	if r.url in OVERRIDE_EMAIL.keys():
-		return OVERRIDE_EMAIL[r.url]
+	if hasattr(r, "url") and r.url in OVERRIDE_EMAIL.keys():
+		return validateEmail(OVERRIDE_EMAIL[r.url], DEFAULT_FROM)
 
 	if 'email' in entry.get('author_detail', []):
-		return entry.author_detail.email
+		return validateEmail(entry.author_detail.email, DEFAULT_FROM)
 
 	if 'email' in feed.get('author_detail', []):
-		return feed.author_detail.email
-
-	#TODO: contributors
+		return validateEmail(feed.author_detail.email, DEFAULT_FROM)
 
 	if USE_PUBLISHER_EMAIL:
 		if 'email' in feed.get('publisher_detail', []):
-			return feed.publisher_detail.email
+			return validateEmail(feed.publisher_detail.email, DEFAULT_FROM)
 
 		if feed.get("errorreportsto", ''):
-			return feed.errorreportsto
+			return validateEmail(feed.errorreportsto, DEFAULT_FROM)
 
-	if r.url in DEFAULT_EMAIL.keys():
+	if hasattr(r, "url") and r.url in DEFAULT_EMAIL.keys():
 		return DEFAULT_EMAIL[r.url]
-
 	return DEFAULT_FROM
 
 ### Simple Database of Feeds ###
@@ -734,7 +738,19 @@ def run():
 					subjecthdr = title
 					datehdr = time.strftime("%a, %d %b %Y %H:%M:%S -0000", datetime)
 					useragenthdr = "rss2email"
-					extraheaders = {'Date': datehdr, 'User-Agent': useragenthdr, 'X-RSS-Feed': f.url, 'X-RSS-ID': id, 'X-RSS-URL': link}
+
+					# Add post tags, if available
+					tagline = ""
+					if 'tags' in entry:
+						tags = entry.get('tags')
+						taglist = []
+						if tags:
+							for tag in tags:
+								taglist.append(tag['term'])
+						if taglist:
+							tagline = ",".join(taglist)
+
+					extraheaders = {'Date': datehdr, 'User-Agent': useragenthdr, 'X-RSS-Feed': f.url, 'X-RSS-ID': id, 'X-RSS-URL': link, 'X-RSS-TAGS' : tagline}
 					if BONUS_HEADER != '':
 						for hdr in BONUS_HEADER.strip().splitlines():
 							pos = hdr.strip().find(':')
@@ -773,7 +789,10 @@ def run():
 								if ('rel' in extralink) and extralink['rel'] == u'via':
 									extraurl = extralink['href']
 									extraurl = extraurl.replace('http://www.google.com/reader/public/atom/', 'http://www.google.com/reader/view/')
-									content += '<br/>Via: <a href="'+extraurl+'">'+extralink['title']+'</a>\n'
+									viatitle = extraurl
+									if ('title' in extralink):
+									    viatitle = extralink['title']
+									content += '<br/>Via: <a href="'+extraurl+'">'+viatitle+'</a>\n'
 						content += '</p></div>\n'
 						content += "\n\n</body></html>"
 					else:
