@@ -586,11 +586,12 @@ def save(feeds):
 		feeds_state = pickle.load(statefile)
 	else:
 		feeds_state = {}
-	try:
-		for url, feed in feeds.items():
-			feeds_state[url] = feed.seen
-		pickle.dump(feeds_state, open(FEEDS_STATE, 'w'))
 
+	for url, feed in feeds.items():
+		feeds_state[url] = feed.seen
+	try:
+		pickle.dump(feeds_state, open(FEEDS_STATE + '.tmp', 'w'))
+		os.rename(FEEDS_STATE + '.tmp', FEEDS_STATE)
 	except IOError, e:
 		logging.error ( "Could not write to state file %s: %s", FEEDS_STATE, e)
 		sys.exit(1)
